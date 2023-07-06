@@ -2,6 +2,7 @@
 # TODO: put in contraction logic if you have multiple operators with general indices.
 import json
 import jsbeautifier
+from Operators import *
 options = jsbeautifier.default_options()
 options.indent_size = 2
 
@@ -10,309 +11,48 @@ print_opt = "erbose"
 
 # remove_disconnected = bool(True)
 
-# %%
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! NEED TO DEFINE AN IDENTITY OPERATOR "I" for computing weights from exponentials!!!!
-E_O_V__ADict = {
-    "C A": "H+ P ",
-    "Spins": "0 0 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "1"]
-}
-
-E_O_V__BDict = {
-    "C A": "H+ P ",
-    "Spins": "1 1 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "1"]
-}
-
-E_OO_VV__AADict = {
-    "C A": "H+ P H+ P ",
-    "Spins": "0 0 0 0 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "1", "2", "2"]
-}
-
-E_OO_VV__ABDict = {
-    "C A": "H+ P H+ P ",
-    "Spins": "0 0 1 1 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "1", "2", "2"]
-}
-
-E_OO_VV__BBDict = {
-    "C A": "H+ P H+ P ",
-    "Spins": "1 1 1 1 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "1", "2", "2"]
-}
-
-E_OOO_VVV__AAADict = {
-    "C A": "H+ P H+ P H+ P ",
-    "Spins": "0 0 0 0 0 0 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "1", "2", "2", "3", "3"]
-}
-
-E_OOO_VVV__AABDict = {
-    "C A": "H+ P H+ P H+ P ",
-    "Spins": "0 0 0 0 1 1 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "1", "2", "2", "3", "3"]
-}
-
-E_OOO_VVV__ABBDict = {
-    "C A": "H+ P H+ P H+ P ",
-    "Spins": "0 0 1 1 1 1 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "1", "2", "2", "3", "3"]
-}
-
-E_OOO_VVV__BBBDict = {
-    "C A": "H+ P H+ P H+ P ",
-    "Spins": "1 1 1 1 1 1 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "1", "2", "2", "3", "3"]
-}
-
-E_O___ADict = {
-    "C A": "H+ ",
-    "Spins": "0 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1"]
-}
-
-E__O__ADict = {
-    "C A": "H ",
-    "Spins": "0 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1"]
-}
-
-E_OO___AADict = {
-    "C A": "H+ H+ ",
-    "Spins": "0 0 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "2"]
-}
-
-E__OO__AADict = {
-    "C A": "H H ",
-    "Spins": "0 0 ",
-    "Weight": 1.0,
-    "Fixed": bool(True),
-    "Particle": ["1", "2"]
-}
-
-FADict = {
-    "C A": "G+ G ",
-    "Spins": "0 0 ",
-    "Weight": 1.0,
-    "String": '(LTOp)f1'
-}
-
-FBDict = {
-    "C A": "G+ G ",
-    "Spins": "1 1 ",
-    "Weight": 1.0,
-    "String": '(LTOp)f1'
-}
-
-VAADict = {
-    "C A": "G+ G G+ G ",
-    "Spins": "0 0 0 0 ",
-    "Weight": (1.0/4.0),
-    "String": '(LTOp)v2tensors.v2("aaaa")'
-}
-
-VABDict = {
-    "C A": "G+ G G+ G ",
-    "Spins": "0 0 1 1 ",
-    "Weight": 1.0,
-    "String": '(LTOp)v2tensors.v2("abab")'
-}
-
-VBBDict = {
-    "C A": "G+ G G+ G ",
-    "Spins": "1 1 1 1 ",
-    "Weight": (1.0/4.0),
-    "String": '(LTOp)v2tensors.v2("bbbb")'
-}
-
-T1ADict = {
-    "C A": "P+ H ",
-    "Spins": "0 0 ",
-    "Weight": 1.0,
-    "String": '(LTOp)t1("aa")'
-}
-
-T1BDict = {
-    "C A": "P+ H ",
-    "Spins": "1 1 ",
-    "Weight": 1.0,
-    "String": '(LTOp)t1("bb")'
-}
-
-T1ADagDict = {
-    "C A": "H+ P ",
-    "Spins": "0 0 ",
-    "Weight": 1.0,
-    "String": '(LTOp)t1("aa")'
-}
-
-T1BDagDict = {
-    "C A": "H+ P ",
-    "Spins": "1 1 ",
-    "Weight": 1.0,
-    "String": '(LTOp)t1("bb")'
-}
-
-T2AADict = {
-    "C A": "P+ H P+ H ",
-    "Spins": "0 0 0 0 ",
-    "Weight": (1.0/4.0),
-    "String": '(LTOp)t2("aaaa")'
-}
-
-T2ABDict = {
-    "C A": "P+ H P+ H ",
-    "Spins": "0 0 1 1 ",
-    "Weight": 1.0,
-    "String": '(LTOp)t2("abab")'
-}
-
-T2BBDict = {
-    "C A": "P+ H P+ H ",
-    "Spins": "1 1 1 1 ",
-    "Weight": (1.0/4.0),
-    "String": '(LTOp)t2("bbbb")'
-}
-
-T2AADagDict = {
-    "C A": "H+ P H+ P ",
-    "Spins": "0 0 0 0 ",
-    "Weight": (1.0/4.0),
-    "String": '(LTOp)t2("aaaa")'
-}
-
-T2ABDagDict = {
-    "C A": "H+ P H+ P ",
-    "Spins": "0 0 1 1 ",
-    "Weight": 1.0,
-    "String": '(LTOp)t2("abab")'
-}
-
-T2BBDagDict = {
-    "C A": "H+ P H+ P ",
-    "Spins": "1 1 1 1 ",
-    "Weight": (1.0/4.0),
-    "String": '(LTOp)t2("bbbb")'
-}
-
-T3AAADict = {
-    "C A": "P+ H P+ H P+ H ",
-    "Spins": "0 0 0 0 0 0 ",
-    "Weight": (1.0/36.0)
-}
-
-T3AABDict = {
-    "C A": "P+ H P+ H P+ H ",
-    "Spins": "0 0 0 0 1 1 ",
-    "Weight": (1.0/4.0)
-}
-
-T3ABBDict = {
-    "C A": "P+ H P+ H P+ H ",
-    "Spins": "0 0 1 1 1 1 ",
-    "Weight": (1.0/4.0)
-}
-
-T3BBBDict = {
-    "C A": "P+ H P+ H P+ H ",
-    "Spins": "1 1 1 1 1 1 ",
-    "Weight": (1.0/36.0)
-}
-
-OperatorsDict = {
-    "E_O_V__A": E_O_V__ADict,
-    "E_O_V__B": E_O_V__BDict,
-    "E_OO_VV__AA": E_OO_VV__AADict,
-    "E_OO_VV__AB": E_OO_VV__ABDict,
-    "E_OO_VV__BB": E_OO_VV__BBDict,
-    "E_OOO_VVV__AAA": E_OOO_VVV__AAADict,
-    "E_OOO_VVV__AAB": E_OOO_VVV__AABDict,
-    "E_OOO_VVV__ABB": E_OOO_VVV__ABBDict,
-    "E_OOO_VVV__BBB": E_OOO_VVV__BBBDict,
-    "E_O___A": E_O___ADict,
-    "E__O__A": E__O__ADict,
-    "E_OO___AA": E_OO___AADict,
-    "E__OO__AA": E__OO__AADict,
-    "FA": FADict,
-    "FB": FBDict,
-    "VAA": VAADict,
-    "VAB": VABDict,
-    "VBB": VBBDict,
-    "T1A": T1ADict,
-    "T1B": T1BDict,
-    "T1A+": T1ADagDict,
-    "T1B+": T1BDagDict,
-    "T2AA": T2AADict,
-    "T2AB": T2ABDict,
-    "T2BB": T2BBDict,
-    "T2AA+": T2AADagDict,
-    "T2AB+": T2ABDagDict,
-    "T2BB+": T2BBDagDict,
-    "T3AAA": T3AAADict,
-    "T3AAB": T3AABDict,
-    "T3ABB": T3ABBDict,
-    "T3BBB": T3BBBDict
-}
-
 
 # %%
 # [Bra][Left][exp(-O)][Hamiltonian][exp(O)][Right][Ket]
 
 ### Bra ###
-Bra = ["E_OO_VV__BB "]
+Bra = ["E__VV__AA "]
+# Bra = [""]
 
 ### Ket ###
-Ket = [""]
+# Ket = ["E_VV_OO__AA "]
+Ket = ["E_VV___AA "]
+# Ket = [""]
 
 ### Left ###
+# Left = [""]
+# Left = ["Y1A+ ", "Y2AA+ "]
 Left = [""]
 
 ### Right ###
 Right = [""]
 
 ### Hamiltonian ###
-Hamiltonian = ["FA ", "FB ", "VAA ", "VAB ", "VBB "]
+# Hamiltonian = ["FA ", "FB ", "VAA ", "VAB ", "VBB "]
+# Hamiltonian = ["FA ", "VAA "]
+Hamiltonian = ["VAA "]
 
 ### Exponential ###
 # Also, only the operator for exp(O) is defined as exp(-O) will be taken care of internally
 # Example 1: exp(T1-T1+) = ["T1 "," -T1+ "]
 # Example 2: exp(T-T+), where T=T1+T2 = ["T1 ","-T1+ ","T2 ","-T2+ "] or ["T1 ","T2 ","-T1+ ","-T2+ "]
 # Opp = [""]
-Opp = ["T1A ", "T1B ", "T2AA ", "T2AB ", "T2BB "]
-# Opp = ["T1A ", "T1B ", "-T1A+ ", "-T1B+ ", "T2AA ", "T2AB ", "T2BB ", "-T2AA+ ", "-T2AB+ ", "-T2BB+ "]
-# Opp = ["T1A ", "-T1A+ ", "T2AA ", "-T2AA+ "]
 # Opp = ["T1A ", "T2AA "]
-# Opp = ["T1A ", "-T1A+ "]
+Opp = ["T1A ", "-T1A+ ", "T2AA ", "-T2AA+ "]
+# Opp = ["T1A ", "T1B ", "-T1A+ ", "-T1B+ ", "T2AA ", "T2AB ", "T2BB ", "-T2AA+ ", "-T2AB+ ", "-T2BB+ "]
+# Opp = ["T1A ", "T1B ", "T2AA ", "T2AB ", "T2BB "]
+
 
 ### Highest Order or Commutator ###
 # Sets max number of operators per exponential, but also the commutator limit.
-Comm_order = 4
+Comm_order = 1
+
+
 
 print("Bra = ", Bra)
 print("Ket = ", Ket)
@@ -378,8 +118,8 @@ for b in Bra:
         for e1 in exp1:
             for o in Hamiltonian:
                 for e2 in exp2:
-                    if ((e1+e2).count("T") <= Comm_order):  # Limits the expansion
-                    # if ((e1+e2).count("T") == Comm_order):  # Limits the expansion
+                    # if ((e1+e2).count("T") <= Comm_order):  # Limits the expansion
+                    if ((e1+e2).count("T") == Comm_order):  # Limits the expansion
                         for r in Right:
                             for k in Ket:
                                 if ((e1+e2).count("-") % 2) == 0:
@@ -769,6 +509,44 @@ for op_set in final_allowed_set:
 
         ContractionDict[count]['Sign'] = parity_and_sign(permutation_list)
 
+        # fixed_free = [None]*(2*len(contraction_list))
+        # # print("")
+        # fixed_shift = 0
+        # for contracted_pair in contraction_list:
+        #     Identity_1 = ContractionDict[count].get("Identities")[contracted_pair[0]]
+        #     Operator_1 = ContractionDict[count].get("Operators")[Identity_1-1]
+        #     Fixed_1 = OperatorsDict[Operator_1].get("Fixed")
+
+        #     Identity_2 = ContractionDict[count].get("Identities")[contracted_pair[1]]
+        #     Operator_2 = ContractionDict[count].get("Operators")[Identity_2-1]
+        #     Fixed_2 = OperatorsDict[Operator_2].get("Fixed")
+
+        #     fixed_free[contracted_pair[0]] =Fixed_1
+        #     fixed_free[contracted_pair[1]] =Fixed_2
+
+        #     if Fixed_1 == None and Fixed_2 == None:
+        #         permutation_list.append(contracted_pair[0])
+        #         permutation_list.append(contracted_pair[1])
+
+        # print(contraction_list)
+        # print(permutation_list)
+
+        # shifted_list = list(i-fixed_shift for i in permutation_list)
+        # print(fixed_shift,shifted_list)
+        # ContractionDict[count]['Sign'] = parity_and_sign(shifted_list)
+
+        # fixed_shift = 0
+        # for i in range(len(fixed_free)):
+        #     if None in fixed_free[i:] and fixed_free[i:][0] == True:
+        #         fixed_shift += 1
+
+        # shifted_list = list(i-fixed_shift for i in permutation_list)
+        # print(shifted_list)
+
+        # ContractionDict[count]['Sign'] = parity_and_sign(shifted_list)
+
+        # print("sign =", ContractionDict[count]['Sign'] ) 
+
         del contracted_pair
         del permutation_list
 
@@ -1093,49 +871,73 @@ print(*Final, sep="\n")
 
 # %%
 from fractions import Fraction
+
+def remove_last_star(string):
+    # Find the index of the last non-whitespace character
+    last_non_whitespace_index = None
+    for i in range(len(string) - 1, -1, -1):
+        if string[i] != ' ':
+            last_non_whitespace_index = i
+            break
+
+    # Check if the last non-whitespace character is "*"
+    if last_non_whitespace_index is not None and string[last_non_whitespace_index] == '*':
+        # Remove the "*" character
+        string = string[:last_non_whitespace_index] + string[last_non_whitespace_index + 1:]
+
+    return string
+
+def find_tuple_with_value(lst, value):
+    for tuple in lst:
+        if value in tuple:
+            return tuple
+    return None  # Return None if the value is not found in any tuple
+
 for dict1 in Final:
 
     fixed_positions = [] 
+    free_positions = []
     for position in range(len(dict1.get("Identities"))):
 
         corr_op = dict1.get("Operators")[dict1.get("Identities")[position]-1]
         if OperatorsDict[corr_op].get("Fixed"):
             fixed_positions.append(position)
+        else:
+            free_positions.append(position)
 
-    
     fixed_start = 1
     free_start = len(fixed_positions)+1
 
     labels = [None]*len(dict1.get("Identities"))
-    for con in dict1.get("Oriented Contractions"):
+    for position in range(len(dict1.get("Identities"))):
+        con = find_tuple_with_value(dict1.get("Oriented Contractions"), position)
         CA1 = dict1.get("CA")[con[0]]
         Fixed_1 = OperatorsDict[dict1.get("Operators")[dict1.get("Identities")[con[0]]-1]].get("Fixed")
         CA2 = dict1.get("CA")[con[1]]
         Fixed_2 = OperatorsDict[dict1.get("Operators")[dict1.get("Identities")[con[1]]-1]].get("Fixed")
 
-        if "H" in CA1 or "H" in CA2:
-            if Fixed_1 or Fixed_2:
+        if OperatorsDict[dict1.get("Operators")[dict1.get("Identities")[position]-1]].get("Fixed") :
+            if "H" in CA1 or "H" in CA2:
                 labels[con[0]] = "h"+str(fixed_start)
                 labels[con[1]] = "h"+str(fixed_start)
                 fixed_start += 1
-            else:
-               labels[con[0]] = "h"+str(free_start)
-               labels[con[1]] = "h"+str(free_start)
-               free_start += 1
-            
-        elif "P" in CA1 or "P" in CA2:
-            if Fixed_1 or Fixed_2:
+            elif "P" in CA1 or "P" in CA2:
                 labels[con[0]] = "p"+str(fixed_start)
                 labels[con[1]] = "p"+str(fixed_start)
                 fixed_start += 1
-            else:
-               labels[con[0]] = "p"+str(free_start)
-               labels[con[1]] = "p"+str(free_start)
-               free_start += 1
-
         else:
-            print("HAVE NOT PROGRAMMED YET")
-    
+            if not Fixed_1 and not Fixed_2:
+                if not labels[con[0]] == [None] :
+                    if "H" in CA1 or "H" in CA2:
+                        labels[con[0]] = "h"+str(free_start)
+                        labels[con[1]] = "h"+str(free_start)
+                        free_start += 1
+                    elif "P" in CA1 or "P" in CA2:
+                        labels[con[0]] = "p"+str(free_start)
+                        labels[con[1]] = "p"+str(free_start)
+                        free_start += 1
+
+                           
     weight_frac = Fraction(dict1.get("weight")).limit_denominator(1000).as_integer_ratio()
     if dict1.get("Sign") == -1:
         if weight_frac[0] == 1 and weight_frac[1] == 1:
@@ -1283,13 +1085,13 @@ for dict1 in Final:
                 else:
                     print("Have not coded up this", Operator, Op_CA_list[_])
 
-            elif Operator in ["T1A","T1B"]:
+            elif Operator in ["T1A","T1B","Y1A+","Y1B+"]:
                 op_str = op_str + '({}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][1])
 
             elif Operator in ["T1A+","T1B+"]:
                 op_str = op_str + '({}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][0])
 
-            elif Operator in ["T2AA","T2AB","T2BB"]:
+            elif Operator in ["T2AA","T2AB","T2BB","Y2AA+","Y2AB+","Y2BB+"]:
                 op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][1], Op_CA_list[_][3])
 
             elif Operator in ["T2AA+","T2AB+","T2BB+"]:
@@ -1305,11 +1107,17 @@ for dict1 in Final:
 
         if flipsign:
             if "-" in eqn_str:
-                eqn_str.replace("-","")
+                eqn_str = eqn_str.replace("-","")
             elif "-" not in eqn_str:
                 eqn_str = "-"+eqn_str
-                
 
+    eqn_str = remove_last_star(eqn_str)
+
+    # MUST BE REMOVED. ONLY FOR INTERMEDIATES
+    if "-" in eqn_str:
+        eqn_str = eqn_str.replace("-","")
+    elif "-" not in eqn_str:
+        eqn_str = "-"+eqn_str
 
     print(eqn_str) 
 
