@@ -1,166 +1,81 @@
-# %%
 # TODO: put in contraction logic if you have multiple operators with general indices.
-import json
+
+# import json
 import jsbeautifier
+import time
+import math
+import sys
+import networkx as nx
+# from fractions import Fraction
 from Operators import *
+from Utilities import *
+from Graphs import *
+from ContractionRules import *
+from Input import *
+from Strings import *
+
 options = jsbeautifier.default_options()
 options.indent_size = 2
 
+tic = time.perf_counter()
 # Print_opt can be "verbose".
 print_opt = "erbose"
 
 # remove_disconnected = bool(True)
 
+# Input operators are declared in Input.py
 
-# %%
-# [Bra][Left][exp(-O)][Hamiltonian][exp(O)][Right][Ket]
-
-### Bra ###
-Bra = ["E__VV__AA "]
-# Bra = [""]
-
-### Ket ###
-# Ket = ["E_VV_OO__AA "]
-Ket = ["E_VV___AA "]
-# Ket = [""]
-
-### Left ###
-# Left = [""]
-# Left = ["Y1A+ ", "Y2AA+ "]
-Left = [""]
-
-### Right ###
-Right = [""]
-
-### Hamiltonian ###
-# Hamiltonian = ["FA ", "FB ", "VAA ", "VAB ", "VBB "]
-# Hamiltonian = ["FA ", "VAA "]
-Hamiltonian = ["VAA "]
-
-### Exponential ###
-# Also, only the operator for exp(O) is defined as exp(-O) will be taken care of internally
-# Example 1: exp(T1-T1+) = ["T1 "," -T1+ "]
-# Example 2: exp(T-T+), where T=T1+T2 = ["T1 ","-T1+ ","T2 ","-T2+ "] or ["T1 ","T2 ","-T1+ ","-T2+ "]
-# Opp = [""]
-# Opp = ["T1A ", "T2AA "]
-Opp = ["T1A ", "-T1A+ ", "T2AA ", "-T2AA+ "]
-# Opp = ["T1A ", "T1B ", "-T1A+ ", "-T1B+ ", "T2AA ", "T2AB ", "T2BB ", "-T2AA+ ", "-T2AB+ ", "-T2BB+ "]
-# Opp = ["T1A ", "T1B ", "T2AA ", "T2AB ", "T2BB "]
-
-
-### Highest Order or Commutator ###
-# Sets max number of operators per exponential, but also the commutator limit.
-Comm_order = 1
-
-
-
-print("Bra = ", Bra)
-print("Ket = ", Ket)
-print("Left = ", Left)
-print("Right = ", Right)
-print("Hamiltonian = ", Hamiltonian)
-print("Opp = ", Opp)
-print("Comm_order = ", Comm_order)
-
-
-# %%
-# This can be simplified. exp1 =  exp2 for terms with an even number of operators and
-# exp1 = -exp2 for Operatorss with an odd number of operators.
-
-# exp(-o), Left exponential of the similarity transformed Hamiltonian
-exp1 = [""]
-# exp(o), Right exponential of the similarity transformed Hamiltonian
-exp2 = [""]
-
-for i in range(0, Comm_order):
-    expanded_list = [""]
-    for term in exp1:
-        for o in Opp:
-            # Flip the sign of operators since it is exp(-O)
-            if (o.count("-") == 1):
-                o = o.replace('-', '')
-            else:
-                o = "-"+o
-            #
-            if ((term+o).count("-") % 2) == 0:
-                sign = ""
-            else:
-                sign = "-"
-            expanded_list.append(sign+term.replace('-', '')+o.replace('-', ''))
-    exp1 = expanded_list[:]
-
-for i in range(0, Comm_order):
-    expanded_list = [""]
-    for term in exp2:
-        for o in Opp:
-            if ((term+o).count("-") % 2) == 0:
-                sign = ""
-            else:
-                sign = "-"
-            expanded_list.append(sign+term.replace('-', '')+o.replace('-', ''))
-    exp2 = expanded_list[:]
+# Generate the expanded lists for the left and right exponentials
+exp1 = expand_exponential(Opp, Comm_order, flip_sign=True)
+exp2 = expand_exponential(Opp, Comm_order)
 
 if print_opt == "verbose":
-    print("Left Exponential Expanded: " , exp1)
+    print("Left Exponential Expanded: ", exp1)
     print("Right Exponential Expanded: ", exp2)
 
-if(Comm_order>0):
-    del term, o, i, expanded_list
-
-
-
-# %%
 # Form all combinations
-
-operator_combs = []
-for b in Bra:
-    for l in Left:
-        for e1 in exp1:
-            for o in Hamiltonian:
-                for e2 in exp2:
-                    # if ((e1+e2).count("T") <= Comm_order):  # Limits the expansion
-                    if ((e1+e2).count("T") == Comm_order):  # Limits the expansion
-                        for r in Right:
-                            for k in Ket:
-                                if ((e1+e2).count("-") % 2) == 0:
-                                    sign = ""
-                                else:
-                                    sign = "- "
-                                operator_combs.append(
-                                    sign+b+l+e1.replace('-', '')+o+e2.replace('-', '')+r+k)
+operator_combs = [
+    f"{b}{l}{e1.replace('-', '')}{h}{e2.replace('-', '')}{r}{k}" if ((e1 + e2).count("-") % 2) == 0 else
+    f"- {b}{l}{e1.replace('-', '')}{h}{e2.replace('-', '')}{r}{k}"
+    for b in Bra
+    for l in Left
+    for e1 in exp1
+    for h in Hamiltonian
+    for e2 in exp2
+    for r in Right
+    for k in Ket
+    if ((e1 + e2).count("T") <= Comm_order)
+]
 
 if print_opt == "verbose":
-    # print("ALL POSSIBLE COMBINATIONS")
+    print("\nALL POSSIBLE COMBINATIONS")
     print(*operator_combs, sep = "\n")
     print("TOTAL POSSIBLE COMBINATIONS = ", len(operator_combs))
 
-del b, l, e1, e2, o, r, k, sign, exp1, exp2
+del exp1, exp2, Comm_order
 
-
-# %%
-print(
-    "ELIMINATING SETS THAT HAVE AN OPERATOR WITH ONLY ONE SPIN WHEN ALL OTHER SPINS ARE THE OTHER SPIN."
-)
+# Preliminary eliminations
+print("\nELIMINATING SETS THAT HAVE AN OPERATOR WITH ONLY ONE SPIN WHEN ALL OTHER SPINS ARE THE OTHER SPIN.")
 
 eliminated_set = []
 tentative_allowed_set = []
-for _ in range(len(operator_combs)):
-    op_set = operator_combs.pop(0)
+
+for op_set in operator_combs[:]:
     operators_with_alpha = 0
     operators_with_beta = 0
 
     if len(op_set.split()) == 1:
         tentative_allowed_set.append(op_set)
-
-    if len(op_set.split()) > 1:
+    else:
         for operator in op_set.split():
             if "-" not in operator:
 
                 # CHECK THE SPINS OF ALL OPERATORS AND COUNT HOW MANY HAVE
                 # AN ALPHA SPIN INDEX AND HOW MANY HAVE A BETA SPIN INDEX.
-                if "0" in OperatorsDict[operator].get("Spins").split():
+                spins = OperatorsDict[operator].get("Spins").split()
+                if "0" in spins:
                     operators_with_alpha += 1
-                if "1" in OperatorsDict[operator].get("Spins").split():
+                if "1" in spins:
                     operators_with_beta += 1
 
         # FOR SETS WITH MORE THAN 1 OPERATOR, ELIMINATE THE SET IF
@@ -170,11 +85,7 @@ for _ in range(len(operator_combs)):
         else:
             tentative_allowed_set.append(op_set)
 
-print(
-    "ELIMINATED {0} COMBINATIONS / {1} COMBINATIONS REMAINING\n".format(
-        len(eliminated_set), len(tentative_allowed_set)
-    )
-)
+print("ELIMINATED {0} COMBINATIONS / {1} COMBINATIONS REMAINING\n".format(len(eliminated_set), len(tentative_allowed_set)))
 
 # if print_opt == "verbose":
 # print("\nTENTATIVE ALLOWED SETS")
@@ -186,272 +97,125 @@ del operator_combs, op_set, operators_with_alpha, operators_with_beta, operator,
 
 print("ELIMINATING SETS IF THERE IS NOT ENOUGH POSSIBLE ALPHA/BETA P/H/G C/A OPERATORS TO FORM PAIRS.")
 
-eliminated_set = []
 final_allowed_set = []
-for _ in range(len(tentative_allowed_set)):
-    op_set = tentative_allowed_set.pop(0)
-
-    alpha_hole_c = 0
-    alpha_hole_a = 0
-    beta_hole_c = 0
-    beta_hole_a = 0
-    alpha_particle_c = 0
-    alpha_particle_a = 0
-    beta_particle_c = 0
-    beta_particle_a = 0
-    alpha_gen_c = 0
-    alpha_gen_a = 0
-    beta_gen_c = 0
-    beta_gen_a = 0
+for op_set in tentative_allowed_set[:]:
+    alpha_hole_c, alpha_hole_a, beta_hole_c, beta_hole_a = 0, 0, 0, 0
+    alpha_particle_c, alpha_particle_a, beta_particle_c, beta_particle_a = 0, 0, 0, 0
+    alpha_gen_c, alpha_gen_a, beta_gen_c, beta_gen_a = 0, 0, 0, 0
 
     for operator in op_set.split():
-        if operator != "-":
-            Operator_spins = OperatorsDict[operator].get("Spins").split()
-            Operator_C_A = OperatorsDict[operator].get("C A").split()
+        if operator == "-":
+            continue
 
-            for i in range(0, len(Operator_C_A)):
-                if (Operator_spins[i] == "0" and Operator_C_A[i] == "H+"):
+        Operator_spins = OperatorsDict[operator].get("Spins").split()
+        Operator_C_A = OperatorsDict[operator].get("C A").split()
+
+        for i in range(len(Operator_C_A)):
+            if Operator_spins[i] == "0":
+                if Operator_C_A[i] == "H+":
                     alpha_hole_c += 1
-                if (Operator_spins[i] == "0" and Operator_C_A[i] == "H"):
+                elif Operator_C_A[i] == "H":
                     alpha_hole_a += 1
-                if (Operator_spins[i] == "1" and Operator_C_A[i] == "H+"):
-                    beta_hole_c += 1
-                if (Operator_spins[i] == "1" and Operator_C_A[i] == "H"):
-                    beta_hole_a += 1
-                if (Operator_spins[i] == "0" and Operator_C_A[i] == "P+"):
+                elif Operator_C_A[i] == "P+":
                     alpha_particle_c += 1
-                if (Operator_spins[i] == "0" and Operator_C_A[i] == "P"):
+                elif Operator_C_A[i] == "P":
                     alpha_particle_a += 1
-                if (Operator_spins[i] == "1" and Operator_C_A[i] == "P+"):
-                    beta_particle_c += 1
-                if (Operator_spins[i] == "1" and Operator_C_A[i] == "P"):
-                    beta_particle_a += 1
-                if (Operator_spins[i] == "0" and Operator_C_A[i] == "G+"):
+                elif Operator_C_A[i] == "G+":
                     alpha_gen_c += 1
-                if (Operator_spins[i] == "0" and Operator_C_A[i] == "G"):
+                elif Operator_C_A[i] == "G":
                     alpha_gen_a += 1
-                if (Operator_spins[i] == "1" and Operator_C_A[i] == "G+"):
+            elif Operator_spins[i] == "1":
+                if Operator_C_A[i] == "H+":
+                    beta_hole_c += 1
+                elif Operator_C_A[i] == "H":
+                    beta_hole_a += 1
+                elif Operator_C_A[i] == "P+":
+                    beta_particle_c += 1
+                elif Operator_C_A[i] == "P":
+                    beta_particle_a += 1
+                elif Operator_C_A[i] == "G+":
                     beta_gen_c += 1
-                if (Operator_spins[i] == "1" and Operator_C_A[i] == "G"):
+                elif Operator_C_A[i] == "G":
                     beta_gen_a += 1
 
-    if (alpha_hole_c > (alpha_hole_a + alpha_gen_a)):
-        eliminated_set.append(op_set)
+    if (
+        alpha_hole_c > (alpha_hole_a + alpha_gen_a)
+        or alpha_particle_c > (alpha_particle_a + alpha_gen_a)
+        or alpha_hole_a > (alpha_hole_c + alpha_gen_c)
+        or alpha_particle_a > (alpha_particle_c + alpha_gen_c)
+        or beta_hole_c > (beta_hole_a + beta_gen_a)
+        or beta_particle_c > (beta_particle_a + beta_gen_a)
+        or beta_hole_a > (beta_hole_c + beta_gen_c)
+        or beta_particle_a > (beta_particle_c + beta_gen_c)
+    ):
         continue
-    elif (alpha_particle_c > (alpha_particle_a + alpha_gen_a)):
-        eliminated_set.append(op_set)
-        continue
-    elif (alpha_hole_a > (alpha_hole_c + alpha_gen_c)):
-        eliminated_set.append(op_set)
-        continue
-    elif (alpha_particle_a > (alpha_particle_c + alpha_gen_c)):
-        eliminated_set.append(op_set)
-        continue
-    elif (beta_hole_c > (beta_hole_a + beta_gen_a)):
-        eliminated_set.append(op_set)
-        continue
-    elif (beta_particle_c > (beta_particle_a + beta_gen_a)):
-        eliminated_set.append(op_set)
-        continue
-    elif (beta_hole_a > (beta_hole_c + beta_gen_c)):
-        eliminated_set.append(op_set)
-        continue
-    elif (beta_particle_a > (beta_particle_c + beta_gen_c)):
-        eliminated_set.append(op_set)
-        continue
-    else:
-        final_allowed_set.append(op_set)
+
+    final_allowed_set.append(op_set)
 
 print(
     "ELIMINATED {0} COMBINATIONS / {1} COMBINATIONS REMAINING\n".format(
-        len(eliminated_set), len(final_allowed_set)
+        len(tentative_allowed_set) - len(final_allowed_set), len(final_allowed_set)
     )
 )
 
+# Clean up
 del alpha_hole_c, alpha_hole_a, beta_hole_c, beta_hole_a
 del alpha_particle_c, alpha_particle_a, beta_particle_c, beta_particle_a
 del alpha_gen_c, alpha_gen_a, beta_gen_c, beta_gen_a
-del eliminated_set, op_set, operator, Operator_spins, Operator_C_A, i, tentative_allowed_set
+del op_set, operator, Operator_spins, Operator_C_A, i, tentative_allowed_set
 
+toc = time.perf_counter()
+print(f"Step Time = {toc - tic:0.4f} seconds\n")
+tic = toc
 
-# %%
-import sys
-from sympy.combinatorics.permutations import Permutation
+print("EVALUATING THE FOLLOWING:")
+for op_set in final_allowed_set:
+    print(final_allowed_set.index(op_set), op_set)
+print("")
 
-
-def all_pairs(lst, identities, all_spin_operators, all_CA_operators, operator_list):
-    if len(lst) < 2:
-        yield []
-        return
-    if len(lst) % 2 == 1:
-        print("ERROR: ODD NUMBER OF C/A OPERATORS")
-        exit()
-    else:
-        a = lst[0]
-        for i in range(1, len(lst)):
-            allow = True
-            pair = (a, lst[i])
-
-            # CONTRACTIONS WITHIN AN OPERATOR ARE NOT ALLOWED
-            if (identities[a] == identities[lst[i]]):
-                allow = False
-            # CONTRACTIONS BETWEEN DIFFERENT SPIN ARE NOT ALLOWED
-            if (all_spin_operators[a] != all_spin_operators[lst[i]]):
-                allow = False
-            # CANNOT CONTRACT TWO ANNIHILATION OPERATORS
-            if (("+" not in all_CA_operators[a]) and ("+" not in all_CA_operators[lst[i]])):
-                allow = False
-            # CANNOT CONTRACT TWO CREATION OPERATORS
-            if (("+" in all_CA_operators[a]) and ("+" in all_CA_operators[lst[i]])):
-                allow = False
-            # X-X+ CONTRACTIONS CANNOT HAPPEN IF EITHER OPERATOR IS OCCUPIED/HOLE
-            if (("+" not in all_CA_operators[a]) and ("+" in all_CA_operators[lst[i]]) and ("H" in all_CA_operators[a])):
-                allow = False
-            if (("+" not in all_CA_operators[a]) and ("+" in all_CA_operators[lst[i]]) and ("H" in all_CA_operators[lst[i]])):
-                allow = False
-            # X+-X CONTRACTIONS CANNOT HAPPEN IF EITHER OPERATOR IS UNOCCUPIED/PARTICLE
-            if (("+" in all_CA_operators[a]) and ("+" not in all_CA_operators[lst[i]]) and ("P" in all_CA_operators[a])):
-                allow = False
-            if (("+" in all_CA_operators[a]) and ("+" not in all_CA_operators[lst[i]]) and ("P" in all_CA_operators[lst[i]])):
-                allow = False
-            # DO NOT CONTRACT BETWEEN TWO EXCITATION OPERATORS (BRA AND KET FOR EXAMPLE)
-            if (("E" in operator_list[identities[a]-1]) and ("E" in operator_list[identities[lst[i]]-1])):
-                allow = False
-            if (allow is True):
-                for rest in all_pairs(lst[1:i]+lst[i+1:], identities, all_spin_operators, all_CA_operators, operator_list):
-                    yield [pair] + rest
-
-
-def parity_and_sign(permutation_list):
-    p = Permutation(permutation_list)
-
-    # Final sign depends on the sign of the expression and the parity
-    if ((p.parity() == 1) and ("-" in op_set)):
-        sign = 1
-    if ((p.parity() == 1) and ("-" not in op_set)):
-        sign = -1
-    if ((p.parity() == 0) and ("-" in op_set)):
-        sign = -1
-    if ((p.parity() == 0) and ("-" not in op_set)):
-        sign = 1
-
-    if print_opt == "Verbose":
-        print(permutation_list)
-        print("Sign = ", sign, "   Parity =", p.parity())
-
-    return sign
-
-
-def reorder_paths(path, index_path):
-    index_order = []
-    for position in index_path:
-        index_order.append(position[0])
-    for _ in range(index_order.index(min(index_order))):
-        path.append(path[0])
-        path.pop(0)
-        index_path.append(index_path[0])
-        index_path.pop(0)
-
-
-# %%
-from collections import defaultdict
- 
-# This class represents a directed graph
-# using adjacency list representation
- 
- 
-class Graph:
- 
-    # Constructor
-    def __init__(self):
- 
-        # default dictionary to store graph
-        self.graph = defaultdict(list)
- 
-    # function to add an edge to graph
-    def addEdge(self, u, v):
-        self.graph[u].append(v)
-        self.graph[v].append(u)
- 
-    # Function to print a BFS of graph
-    def BFS(self, s, l):
-        
-        if len(self.graph) != 0 :
-            # Mark all the vertices as not visited
-
-            visited = [False] * l
-
-            # Create a queue for BFS
-            queue = []
-    
-            # Mark the source node as
-            # visited and enqueue it
-            queue.append(s)
-            visited[s] = True
-
-            while queue:
-            
-                # Dequeue a vertex from
-                # queue and print it
-                s = queue.pop(0)
-                # print(s, end=" ")
-    
-                # Get all adjacent vertices of the
-                # dequeued vertex s. If a adjacent
-                # has not been visited, then mark it
-                # visited and enqueue it
-                for i in self.graph[s]:
-                    if visited[i] is False:
-                        queue.append(i)
-                        visited[i] = True
-        
-        else:
-            visited = [False]
-
-        return visited
-
-# %%
-import math
-
-collective = []
-ContractionDict={}
-count = -1
+# collective = []
+ContractionDict = {}
+ShortDict = {}
+count = 0
 for op_set in final_allowed_set:
 
-    identity = 1
-    identities = []
+    # Initialize lists for identities, CA operators, spin operators, and the operator list
     all_CA_operators = []
     all_spin_operators = []
+    identities = []
     operator_list = []
+
+    # Initialize the identity counter
+    identity = 1
+
+    # Iterate over each operator in the split 'op_set'
     for operator in op_set.split():
         if operator != "-":
+            # Retrieve CA and Spin operators for the current valid operator
+            ca_operators = OperatorsDict[operator].get("C A", "").split()
+            spin_operators = OperatorsDict[operator].get("Spins", "").split()
 
-            all_CA_operators.extend(
-                OperatorsDict[operator].get("C A").split())
-            all_spin_operators.extend(
-                OperatorsDict[operator].get("Spins").split())
+            # Extend the lists with CA and Spin operators
+            all_CA_operators.extend(ca_operators)
+            all_spin_operators.extend(spin_operators)
 
-            for _ in range(len(OperatorsDict[operator].get("Spins").split())):
-                identities.append(identity)
+            # Append the current identity to the identities list, once for each Spin operator
+            identities.extend([identity] * len(spin_operators))
+
+            # Append the current operator to the operator list
+            operator_list.append(operator)
+
+            # Increment the identity counter only after processing a valid operator
             identity += 1
 
-            operator_list.append(operator)
-    
-    del identity, operator
-
     evaluated_contractions = []
-    # print("operator_list",operator_list)
+    
     for contraction_list in all_pairs(list(range(0, len(all_CA_operators))),identities,all_spin_operators,all_CA_operators,operator_list):
         evaluated_contractions.append(contraction_list)
 
     del operator_list
 
-    if not evaluated_contractions:
-        # eliminated.append(op_set) # Eliminated sets are put in a list for debgging purposes.
-        if print_opt == "verbose":
-            print(op_set," WAS ELIMINATED BECAUSE NO VIABLE SET OF CONTRACTIONS WERE FOUND\n")
-            print("-"*40+"\n")
-    else:
+    if evaluated_contractions:
         if print_opt == "verbose":
             print(op_set)
             print("CA Operators: ", all_CA_operators)
@@ -460,10 +224,13 @@ for op_set in final_allowed_set:
             print("Evaluated Contractions: ", *
                   evaluated_contractions, sep="\n")
             print("-"*40+"\n")
+    else:
+        if print_opt == "verbose":
+            print(op_set," WAS ELIMINATED BECAUSE NO VIABLE SET OF CONTRACTIONS WERE FOUND\n")
+            print("-"*40+"\n")
 
-
+    compare_start = count
     for contraction_list in evaluated_contractions:
-        count += 1
         ContractionDict[count]={}
         # count = str(evaluated_contractions.index(contraction_list))
 
@@ -498,58 +265,16 @@ for op_set in final_allowed_set:
         weight *= 1/(math.factorial(right_t_count))
         del operator, t_count, left_t_count, right_t_count
 
-        ContractionDict[count]['weight'] = weight #Weight can be better defined depending on multiple exponents or explicit weights from the user.
+        ContractionDict[count]['Weight'] = weight #Weight can be better defined depending on multiple exponents or explicit weights from the user.
 
-        # List the contracted indices in the same order as the list of contractions.
-        # This is used to determine the parity.
-        permutation_list = []
-        for contracted_pair in contraction_list:
-            permutation_list.append(contracted_pair[0])
-            permutation_list.append(contracted_pair[1])
+        # Flatten a list of contracted indices pairs into a single list
+        permutation_list = [element for pair in contraction_list for element in pair]
 
-        ContractionDict[count]['Sign'] = parity_and_sign(permutation_list)
+        # Determine Sign based on parity and whether there is a negative sign in the operator expression.
+        ContractionDict[count]['Sign'] = parity_and_sign(permutation_list,op_set)
 
-        # fixed_free = [None]*(2*len(contraction_list))
-        # # print("")
-        # fixed_shift = 0
-        # for contracted_pair in contraction_list:
-        #     Identity_1 = ContractionDict[count].get("Identities")[contracted_pair[0]]
-        #     Operator_1 = ContractionDict[count].get("Operators")[Identity_1-1]
-        #     Fixed_1 = OperatorsDict[Operator_1].get("Fixed")
-
-        #     Identity_2 = ContractionDict[count].get("Identities")[contracted_pair[1]]
-        #     Operator_2 = ContractionDict[count].get("Operators")[Identity_2-1]
-        #     Fixed_2 = OperatorsDict[Operator_2].get("Fixed")
-
-        #     fixed_free[contracted_pair[0]] =Fixed_1
-        #     fixed_free[contracted_pair[1]] =Fixed_2
-
-        #     if Fixed_1 == None and Fixed_2 == None:
-        #         permutation_list.append(contracted_pair[0])
-        #         permutation_list.append(contracted_pair[1])
-
-        # print(contraction_list)
-        # print(permutation_list)
-
-        # shifted_list = list(i-fixed_shift for i in permutation_list)
-        # print(fixed_shift,shifted_list)
-        # ContractionDict[count]['Sign'] = parity_and_sign(shifted_list)
-
-        # fixed_shift = 0
-        # for i in range(len(fixed_free)):
-        #     if None in fixed_free[i:] and fixed_free[i:][0] == True:
-        #         fixed_shift += 1
-
-        # shifted_list = list(i-fixed_shift for i in permutation_list)
-        # print(shifted_list)
-
-        # ContractionDict[count]['Sign'] = parity_and_sign(shifted_list)
-
-        # print("sign =", ContractionDict[count]['Sign'] ) 
-
-        del contracted_pair
         del permutation_list
-
+    
         # Contractions are reordered such that creation operators are listed before annihilation.
         # This is for determing paths, which go from creation operators to annihilation operators.
         for contraction in contraction_list:
@@ -560,568 +285,141 @@ for op_set in final_allowed_set:
 
         ContractionDict[count]['Oriented Contractions'] = list(contraction_list)
 
+        # Build the graph.
+        ContractionDict[count]['Graph'] = build_graph(ContractionDict[count], OperatorsDict)
+
         # Determine if Graph is Disconnected.
-        vertex_FFlist = [False]*len(ContractionDict[count].get("Operators"))
-        fixed_count = 0
-        count_op = 0
-        for operator in ContractionDict[count].get("Operators"):
-            if OperatorsDict[operator].get("Fixed"):
-                fixed_count += 1
-                vertex_FFlist[count_op] = True
-            count_op += 1
+        ContractionDict[count]['Connected'] = check_if_connected(ContractionDict[count]['Graph'], OperatorsDict)
 
-        # OPTION 1: THERE IS NO VERTEX THAT IS NOT "FIXED"
-        if len(ContractionDict[count].get("Operators")) - fixed_count == 0: # Not sure if I want this this way.
-            # print(count, "NO FREE OPERATOR, MARKING GRAPH AS CONNECTED")
-            ContractionDict[count]['Connected'] = bool(True)
+        # Increment count
+        count += 1
 
-        # OPTION 2: THERE IS ONE VERTEX THAT IS NOT "FIXED"
-        if len(ContractionDict[count].get("Operators")) - fixed_count == 1: # Not sure if I want this this way.
-            # print(count, "ONLY ONE FREE OPERATOR, MARKING GRAPH AS CONNECTED")
-            ContractionDict[count]['Connected'] = bool(True)
+    compare_end = count
 
-        # OPTION 3: EVALUATE GRAPH
-        if len(ContractionDict[count].get("Operators")) - fixed_count > 1:
-            g = Graph()
-            vertex_list = []
-            start_vertex = -1
+    # The first level of combination is at the expresion level
+    ignore_list = []
+    for current in range(compare_start, compare_end):
+        if current not in ignore_list:
+            combined_weight =  1.0 * ContractionDict[current]['Weight']
+            for i in range(current+1, compare_end):
+                if i not in ignore_list:
+                    if(sorted(ContractionDict[current]['Operators']) == sorted(ContractionDict[i]['Operators'])):
+                        if check_isomorphism(ContractionDict[current]['Graph'],ContractionDict[i]['Graph']):
+                            combined_weight += ContractionDict[i]['Weight']
+                            ignore_list.append(i)
 
-            for contraction in ContractionDict[count].get("Oriented Contractions"):
-                Identity_1 = ContractionDict[count].get("Identities")[contraction[0]]
-                Operator_1 = ContractionDict[count].get("Operators")[Identity_1-1]
-                Fixed_1 = OperatorsDict[Operator_1].get("Fixed")
+            ShortDict[current] = ContractionDict[current]
+            ShortDict[current]['Weight'] = combined_weight
 
-                Identity_2 = ContractionDict[count].get("Identities")[contraction[1]]
-                Operator_2 = ContractionDict[count].get("Operators")[Identity_2-1]
-                Fixed_2 = OperatorsDict[Operator_2].get("Fixed")
+    toc = time.perf_counter()
+    print(f"{final_allowed_set.index(op_set)+1}/{len(final_allowed_set)} Evaluating {op_set} = {toc - tic:0.4f} seconds")
+    sys.stdout.flush()
+    tic = toc
 
-                if not Fixed_1 and not Fixed_2:
-                    g.addEdge(Identity_1-1, Identity_2-1)
-                    vertex_list.append(Identity_1-1)
-                    vertex_list.append(Identity_2-1)
-                    start_vertex = Identity_2-1
+if print_opt == "verbose":
+    print("Full Dictionary")
+    for Dict1 in ContractionDict:
+        print(Dict1, ContractionDict[Dict1])
 
-            # print(vertex_list)
-            # print(vertex_FFlist)
-            if start_vertex == -1:
-                print("did not find a start vertex")
-                print(ContractionDict[count])
-                ContractionDict[count]['Connected'] = bool(False)
-                break
+print("Shorter Dictionary")
+for Dict1 in ShortDict:
+    print(Dict1,ShortDict[Dict1])
+
+# There is a final level of combination across expressions
+FinalDict={}
+ignore_list = []
+for key_1, value_1 in ShortDict.items():
+    if key_1 not in ignore_list:
+        if "-" in value_1['Term']:
+            combined_weight = -1.0 * value_1['Weight']
+        else:
+            combined_weight =  1.0 * value_1['Weight']
+
+        for key_2, value_2 in ShortDict.items():
+            if key_2 > key_1 and key_2 not in ignore_list:
+                if(sorted(value_1['Operators']) == sorted(value_2['Operators'])):
+                    if check_isomorphism(value_1['Graph'],value_2['Graph']):
+                        if "-" in value_2['Term']:
+                            combined_weight -= value_2['Weight']
+                        else:
+                            combined_weight += value_2['Weight']
+
+                        ignore_list.append(key_2)
+
+        FinalDict[key_1] = ShortDict[key_1]
+        FinalDict[key_1]['Weight'] = round(combined_weight,9)
+
+print("")
+count = sum(1 for value in FinalDict.values() if abs(value['Weight']) == 0.0 and not value['Connected'])
+print(count, "vanishing disconnected terms.")
+count = sum(1 for value in FinalDict.values() if abs(value['Weight']) != 0.0 and not value['Connected'])
+print(count, "nonvanishing disconnected terms.")
+count = sum(1 for value in FinalDict.values() if abs(value['Weight']) == 0.0 and value['Connected'])
+print(count, "vanishing connected terms.")
+count = sum(1 for value in FinalDict.values() if abs(value['Weight']) != 0.0 and value['Connected'])
+print(count, "nonvanishing connected terms.")
+for value in FinalDict.values():
+    if abs(value['Weight']) != 0.0 and value['Connected']: 
+        print(value)
+
+Final_Equations = []
+for key, value in FinalDict.items():
+    if print_opt == "verbose":
+        print("\n", key, value)
+
+    weight = value.get("Weight")
+    sign = value.get("Sign")
+    eqn_str = process_weight(weight, sign)
+
+    if eqn_str:
+        identities = value["Identities"]
+        operators = value["Operators"]
+        contractions = value["Oriented Contractions"]
+        ca_values = value["CA"]
+
+        fixed_positions, free_positions = determine_positions(identities, operators, OperatorsDict)
+        labels = label_positions(identities, contractions, ca_values, operators, OperatorsDict)
+
+        Op_CA_list = [[] for x in range(len(value["Operators"]))]
+        for position in range(len(labels)):
+
+            identity = value["Identities"][position]
+            Op_CA_list[identity-1].append(labels[position])
+
+        length = len(Op_CA_list)
+        for _ in range(length):
+            Operator = value["Operators"][_]
+            op_str = ""
+            flipsign = False
+
+            if Operator not in operator_mapping:
+                if not OperatorsDict[Operator].get("Fixed"):
+                    print("{} is not programmed".format(Operator))
             else:
-                ContractionDict[count]['Connected'] = bool(True)
-                BFSearch = g.BFS(start_vertex, len(ContractionDict[count].get("Operators")))
-                # print(BFSearch)
-                for vertex in range(len(vertex_FFlist)):
-                    if vertex_FFlist[vertex] is False:
-                        if BFSearch[vertex] is False:
-                            ContractionDict[count]['Connected'] = bool(False)
+                labels = Op_CA_list[_]
+                key = tuple(label[0] for label in labels)
+                op_template = operator_mapping[Operator].get(key)
+                if op_template:
+                    op_str = op_template[0].format(*labels)
+                    if _ != length-1:
+                        eqn_str +=  op_str + " * "
+                    else:
+                        eqn_str +=  op_str
 
+                    if flipsign:
+                        if "-" in eqn_str:
+                            eqn_str = eqn_str.replace("-","")
+                        elif "-" not in eqn_str:
+                            eqn_str = "-"+eqn_str 
 
-
-
-# ALL THE DATA IS PUT INTO ContractionDict WHICH WILL BE USED TO FIND EQUIVALENT TERMS AND SUCH.
-# IT MAY BE BEST TO BREAK UP collective FOR FASTER PROCESSING OF LATER STEPS.
-# print(jsbeautifier.beautify(json.dumps(ContractionDict), options))
-
-
-# DISCONNECTED TERMS 
-# So there are two ways I can think about going about disconnected terms.
-# Option 1 is to remove them before any resumming. This saves on the overhead of the resumming because it removes 
-# a number of terms before resumming. You can do this by forming list of indices from one loop or path, then 
-# expand on this for the remaining loops (recursively) until you have the full set of indices or you find a loop/path that
-# cannot continue extending the list of indices and therefore must be disconnected. I will need the list of index paths, which
-# was removed from the get_path() routine, but can be put back by adding the same structed lines for path[] as for index_path[].
-# Option 2 is that they are removed through resummation. I am choosing this pathway because there are theories that hae disconnected
-# terms that don't vanish.
-
-for _ in ContractionDict:
-
-    connections = []
-    NewLabels = []
-    for operator in ContractionDict[_].get("Operators"):
-        connections.append([operator,[],[]])
-
-        Label =str(operator)
-        OutFixed = 0
-        InFixed = 0
-
-        if not OperatorsDict[operator].get("Fixed"):
-            for contraction in ContractionDict[_].get("Oriented Contractions"):
-                Identity_1 = ContractionDict[_].get("Identities")[contraction[0]]
-                Operator_1 = ContractionDict[_].get("Operators")[Identity_1-1]
-                Fixed_1 = OperatorsDict[Operator_1].get("Fixed")
-                # Position_1 = ContractionDict[_].get("Identities")[:contraction[0]].count(Identity_1)
+                else:
+                    print(f"No template found for {key}")
         
-                Identity_2 = ContractionDict[_].get("Identities")[contraction[1]]
-                Operator_2 = ContractionDict[_].get("Operators")[Identity_2-1]
-                Fixed_2 = OperatorsDict[Operator_2].get("Fixed")
-                # Position_2 = ContractionDict[_].get("Identities")[:contraction[1]].count(Identity_2)
-
-                if Identity_1 == len(connections) and not Fixed_1:
-                    if Fixed_2:
-                        OutFixed += 1
-
-                if Identity_2 == len(connections) and not Fixed_2:
-                    if Fixed_1:
-                        InFixed += 1
-
-            Label = Label+"-"+str(InFixed)+"-"+str(OutFixed)
-
-        NewLabels.append(Label)
-
-    # print(NewLabels)
-
-    for contraction in ContractionDict[_].get("Oriented Contractions"):
-
-        Identity_1 = ContractionDict[_].get("Identities")[contraction[0]]
-        Operator_1 = ContractionDict[_].get("Operators")[Identity_1-1]
-        Fixed_1 = OperatorsDict[Operator_1].get("Fixed")
-        Position_1 = ContractionDict[_].get("Identities")[:contraction[0]].count(Identity_1)
-
-        Identity_2 = ContractionDict[_].get("Identities")[contraction[1]]
-        Operator_2 = ContractionDict[_].get("Operators")[Identity_2-1]
-        Fixed_2 = OperatorsDict[Operator_2].get("Fixed")
-        Position_2 = ContractionDict[_].get("Identities")[:contraction[1]].count(Identity_2)
-
-        # Possibility 1: both contraction[0] and contraction[1] belong to 'Fixed' sets.
-        # NOT TESTED!!!!
-        if Fixed_1 and Fixed_2:
-            in_con = [NewLabels[Identity_1-1]+"-"+str(Identity_1),
-                       ContractionDict[_].get("Spins")[contraction[0]],
-                       OperatorsDict[Operator_1].get("Particle")[Position_1]
-                       ]
-            connections[Identity_2-1][1].append(in_con)
-            out_con = [NewLabels[Identity_2-1]+"-"+str(Identity_2),
-                       ContractionDict[_].get("Spins")[contraction[1]],
-                       OperatorsDict[Operator_2].get("Particle")[Position_2]
-                       ]
-            connections[Identity_1-1][2].append(out_con)
-        # Possibility 2: only contraction[0] belongs to a 'Fixed' set.
-        if Fixed_1 and not Fixed_2:
-            in_con = [NewLabels[Identity_1-1]+"-"+str(Identity_1),
-                       ContractionDict[_].get("Spins")[contraction[0]],
-                       OperatorsDict[Operator_1].get("Particle")[Position_1]
-                       ]
-            connections[Identity_2-1][1].append(in_con)
-        # Possibility 3: only contraction[1] belongs to a 'Fixed' set.
-        if not Fixed_1 and Fixed_2:
-            out_con = [NewLabels[Identity_2-1]+"-"+str(Identity_2),
-                       ContractionDict[_].get("Spins")[contraction[1]],
-                       OperatorsDict[Operator_2].get("Particle")[Position_2]
-                       ]
-            connections[Identity_1-1][2].append(out_con)
-        # Possibility 4: neither contraction[0] and contraction[1] belong to a 'Fixed' sets.
-        if not Fixed_1 and not Fixed_2:
-            in_con = [NewLabels[Identity_1-1],
-                      ContractionDict[_].get("Spins")[contraction[0]]]
-            out_con = [NewLabels[Identity_2-1],
-                       ContractionDict[_].get("Spins")[contraction[1]]]
-            connections[Identity_2-1][1].append(in_con)
-            connections[Identity_1-1][2].append(out_con)
-
-    for conset in connections:
-        conset[1].sort()
-        conset[2].sort()
-    connections.sort()
-
-    ContractionDict[_]['Connections'] = connections
-
-
-
-# print(jsbeautifier.beautify(json.dumps(ContractionDict), options))
-
-# for Dict1 in ContractionDict:
-#     ContractionDict[Dict1]['Evaluation'] = Evaluate_Con(ContractionDict[Dict1].get("Operators"),ContractionDict[Dict1].get("Oriented Contractions"),ContractionDict[Dict1].get("Identities"),ContractionDict[Dict1].get("CA"))
-#     print(Dict1, ContractionDict[Dict1])
-
-
-searched_conn = []
-Final = []
-
-search_sets = []
-searched_operators_sets = []
-for Dict1 in ContractionDict:
-    same_operators_set = []
-    Dict1_Ops = sorted(ContractionDict[Dict1].get("Operators"))
-    Dict1_Conn = ContractionDict[Dict1].get("Connected")
-    Combo_1 = [Dict1_Ops, Dict1_Conn]
-
-    if Combo_1 not in searched_operators_sets:
-        same_operators_set.append(Dict1)
-        searched_operators_sets.append(Combo_1)
-
-        for Dict2 in ContractionDict:
-            Dict2_Ops = sorted(ContractionDict[Dict2].get("Operators"))
-            Dict2_Conn = ContractionDict[Dict2].get("Connected")
-            Combo_2 = [Dict2_Ops, Dict2_Conn]
-
-            if Combo_1 == Combo_2:
-                if Dict2 > Dict1:
-                    same_operators_set.append(Dict2)
-
-        search_sets.append(same_operators_set)
-
-
-for search in search_sets:
-
-    for Dict1 in search:
-
-        op_set1 = ContractionDict[Dict1].get("Term").split()
-        Connections_1 = ContractionDict[Dict1].get("Connections")
-        Connected_1 = ContractionDict[Dict1].get("Connected")
-        Combo_1 = [Connections_1, Connected_1]
-
-        if "-" in op_set1:
-            op_set1 = sorted(op_set1[1:])
-            sum_weight = -1*ContractionDict[Dict1].get("weight")
-        else:
-            op_set1 = sorted(op_set1)
-            sum_weight = ContractionDict[Dict1].get("weight")
-
-        if Combo_1 not in searched_conn:
-            searched_conn.append(Combo_1)
-            ContractionDict[Dict1]
-
-            for Dict2 in search[search.index(Dict1)+1:]:
-
-                op_set2 = ContractionDict[Dict2].get("Term").split()
-                Connections_2 = ContractionDict[Dict2].get("Connections")
-                Connected_2 = ContractionDict[Dict2].get("Connected")
-                Combo_2 = [Connections_2, Connected_2]
-
-                if Combo_1 == Combo_2:
-
-                    # print(Dict1, Dict2, ContractionDict[Dict2])
-
-                    if "-" in op_set2:
-                        sum_weight += -1*ContractionDict[Dict2].get("weight")
-
-                    if "-" not in op_set2:
-                        sum_weight += ContractionDict[Dict2].get("weight")
-
-            # print(sum_weight)
-
-            # NOTE:
-
-            if ("%.6f" % sum_weight) == '0.000000' or ("%.6f" % sum_weight) == '-0.000000':
-                if Connected_1 == bool(True):
-                    print("Interesting!!!, {} has zero-sum weight, but is not disconnected.".format(Dict1))
-                    Final.append(ContractionDict[Dict1])
-                    del Final[Final.index(ContractionDict[Dict1])]['weight']
-                    Final[Final.index(ContractionDict[Dict1])]['weight'] = ("%.6f" % sum_weight)
-                # If it is disconnected, do nothing.
-
-            elif sum_weight > 0 and "-" not in ContractionDict[Dict1].get("Term").split():
-                if Connected_1 == bool(False):
-                    print("Interesting!!!, {} has non-zero weight, but is disconnected.".format(Dict1))
-                else:
-                    # print("Here 1")
-                    Final.append(ContractionDict[Dict1])
-                    del Final[Final.index(ContractionDict[Dict1])]['weight']
-                    Final[Final.index(ContractionDict[Dict1])]['weight'] = ("%.6f" % sum_weight)
-
-            elif sum_weight < 0 and "-" in ContractionDict[Dict1].get("Term").split():
-                if Connected_1 == bool(False):
-                    print("Interesting!!!, {} has non-zero weight, but is disconnected.".format(Dict1))
-                else:
-                    # print("Here 2")
-                    Final.append(ContractionDict[Dict1])
-                    del Final[Final.index(ContractionDict[Dict1])]['weight']
-                    Final[Final.index(ContractionDict[Dict1])]['weight'] = ("%.6f" % sum_weight)
-
-            else:
-                allow = False
-                for Dict2 in search[search.index(Dict1)+1:]:
-
-                    if not allow:
-                    
-                        op_set2 = ContractionDict[Dict2].get("Term").split()
-                        Connections_2 = ContractionDict[Dict2].get("Connections")
-                        Connected_2 = ContractionDict[Dict2].get("Connected")
-                        Combo_2 = [Connections_2, Connected_2]
-
-                        if Combo_1 == Combo_2:
-
-                            if sum_weight > 0 and "-" not in ContractionDict[Dict2].get("Term").split():
-                                if not ContractionDict[Dict2].get("Connected"):
-                                    print("Interesting!!!, {} has non-zero weight, but is disconnected.".format(Dict2))
-                                else:
-                                    # print("Here 3")
-                                    Final.append(ContractionDict[Dict2])
-                                    del Final[Final.index(ContractionDict[Dict2])]['weight']
-                                    Final[Final.index(ContractionDict[Dict2])]['weight'] = ("%.6f" % sum_weight)
-                                    allow = True
-
-                            elif sum_weight < 0 and "-" in ContractionDict[Dict2].get("Term").split():
-                                if not ContractionDict[Dict2].get("Connected"):
-                                    print("Interesting!!!, {} has non-zero weight, but is disconnected.".format(Dict2))
-                                else:
-                                    # print("Here 4")
-                                    Final.append(ContractionDict[Dict2])
-                                    del Final[Final.index(ContractionDict[Dict2])]['weight']
-                                    Final[Final.index(ContractionDict[Dict2])]['weight'] = ("%.6f" % sum_weight)
-                                    allow = True
-
-                if not allow:
-                    print("Funny Situation: Cannot find a term with same sign as the sum_weight.")
-
-
-print(*Final, sep="\n")
-
-# %%
-from fractions import Fraction
-
-def remove_last_star(string):
-    # Find the index of the last non-whitespace character
-    last_non_whitespace_index = None
-    for i in range(len(string) - 1, -1, -1):
-        if string[i] != ' ':
-            last_non_whitespace_index = i
-            break
-
-    # Check if the last non-whitespace character is "*"
-    if last_non_whitespace_index is not None and string[last_non_whitespace_index] == '*':
-        # Remove the "*" character
-        string = string[:last_non_whitespace_index] + string[last_non_whitespace_index + 1:]
-
-    return string
-
-def find_tuple_with_value(lst, value):
-    for tuple in lst:
-        if value in tuple:
-            return tuple
-    return None  # Return None if the value is not found in any tuple
-
-for dict1 in Final:
-
-    fixed_positions = [] 
-    free_positions = []
-    for position in range(len(dict1.get("Identities"))):
-
-        corr_op = dict1.get("Operators")[dict1.get("Identities")[position]-1]
-        if OperatorsDict[corr_op].get("Fixed"):
-            fixed_positions.append(position)
-        else:
-            free_positions.append(position)
-
-    fixed_start = 1
-    free_start = len(fixed_positions)+1
-
-    labels = [None]*len(dict1.get("Identities"))
-    for position in range(len(dict1.get("Identities"))):
-        con = find_tuple_with_value(dict1.get("Oriented Contractions"), position)
-        CA1 = dict1.get("CA")[con[0]]
-        Fixed_1 = OperatorsDict[dict1.get("Operators")[dict1.get("Identities")[con[0]]-1]].get("Fixed")
-        CA2 = dict1.get("CA")[con[1]]
-        Fixed_2 = OperatorsDict[dict1.get("Operators")[dict1.get("Identities")[con[1]]-1]].get("Fixed")
-
-        if OperatorsDict[dict1.get("Operators")[dict1.get("Identities")[position]-1]].get("Fixed") :
-            if "H" in CA1 or "H" in CA2:
-                labels[con[0]] = "h"+str(fixed_start)
-                labels[con[1]] = "h"+str(fixed_start)
-                fixed_start += 1
-            elif "P" in CA1 or "P" in CA2:
-                labels[con[0]] = "p"+str(fixed_start)
-                labels[con[1]] = "p"+str(fixed_start)
-                fixed_start += 1
-        else:
-            if not Fixed_1 and not Fixed_2:
-                if not labels[con[0]] == [None] :
-                    if "H" in CA1 or "H" in CA2:
-                        labels[con[0]] = "h"+str(free_start)
-                        labels[con[1]] = "h"+str(free_start)
-                        free_start += 1
-                    elif "P" in CA1 or "P" in CA2:
-                        labels[con[0]] = "p"+str(free_start)
-                        labels[con[1]] = "p"+str(free_start)
-                        free_start += 1
-
-                           
-    weight_frac = Fraction(dict1.get("weight")).limit_denominator(1000).as_integer_ratio()
-    if dict1.get("Sign") == -1:
-        if weight_frac[0] == 1 and weight_frac[1] == 1:
-            eqn_str = "-1.0 * "
-        else:
-            eqn_str = "-("+str(weight_frac[0])+".0/"+str(weight_frac[1])+".0) * "
-    elif dict1.get("Sign") == 1:
-        if weight_frac[0] == 1 and weight_frac[1] == 1:
-            eqn_str = "1.0 * "
-        else:
-            eqn_str = "("+str(weight_frac[0])+".0/"+str(weight_frac[1])+".0) * "
-    else: 
-        print("Sign Error")
-
-    Op_CA_list = [[] for x in range(len(dict1.get("Operators")))]
-    for position in range(len(labels)):
-
-        identity = dict1.get("Identities")[position]
-        Op_CA_list[identity-1].append(labels[position])
+        Final_Equations.append(eqn_str)
         
-    for _ in range(len(Op_CA_list)):
+        if print_opt == "verbose":
+            print(eqn_str)
         
-        Operator = dict1.get("Operators")[_]
-
-        flipsign = False
-        if "String" in OperatorsDict[Operator].keys():
-
-            op_str = OperatorsDict[Operator].get("String")
-
-            if Operator in ["FA","FB"]:
-                # Assume we only have OO, OV(=VO), and VV 
-                if("h" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1]):
-                    if Operator == "FA":
-                        op_str = op_str + '_OO("aa")({}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][1])
-                    if Operator == "FB":
-                        op_str = op_str + '_OO("bb")({}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][1])
-                elif("h" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1]):
-                    if Operator == "FA":
-                        op_str = op_str + '_OV("aa")({}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][1])
-                    if Operator == "FB":
-                        op_str = op_str + '_OV("bb")({}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][1])
-                elif("p" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1]):
-                    if Operator == "FA":
-                        op_str = op_str + '_OV("aa")({}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][0])
-                    if Operator == "FB":
-                        op_str = op_str + '_OV("bb")({}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][0])
-                elif("p" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1]):
-                    if Operator == "FA":
-                        op_str = op_str + '_VV("aa")({}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][1])
-                    if Operator == "FB":
-                        op_str = op_str + '_VV("bb")({}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][1])
-                else:
-                    print("F term that is not programmed")
-
-            elif Operator in ["VAA","VAB","VBB"]:
-                # v2ijkl - "aaaa", "abab", "bbbb" 
-                if("h" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1] and "h" in Op_CA_list[_][2] and "h" in Op_CA_list[_][3]):
-                    op_str = op_str.replace("v2(","v2ijkl(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][1], Op_CA_list[_][3])
-
-                # v2ijka(=v2jiak)(=v2kaij)(=v2akji) - "aaaa", "abab", "baba", "bbbb" 
-                elif("p" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1] and "h" in Op_CA_list[_][2] and "h" in Op_CA_list[_][3]):
-                    if Operator == "VAB":
-                        op_str = op_str.replace("abab","baba")
-                    op_str = op_str.replace("v2(","v2ijka(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][3], Op_CA_list[_][1],Op_CA_list[_][2], Op_CA_list[_][0])  
-
-                elif("h" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1] and "h" in Op_CA_list[_][2] and "h" in Op_CA_list[_][3]):
-                    if Operator == "VAB":
-                        op_str = op_str.replace("abab","baba")
-                    op_str = op_str.replace("v2(","v2ijka(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][2], Op_CA_list[_][0],Op_CA_list[_][3], Op_CA_list[_][1])                
-                
-                elif("h" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1] and "p" in Op_CA_list[_][2] and "h" in Op_CA_list[_][3]):
-                    op_str = op_str.replace("v2(","v2ijka(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][3],Op_CA_list[_][0], Op_CA_list[_][2])
-                
-                elif("h" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1] and "h" in Op_CA_list[_][2] and "p" in Op_CA_list[_][3]):
-                    op_str = op_str.replace("v2(","v2ijka(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][1], Op_CA_list[_][3])
-                
-                # v2iajb (=v2aibj - "aaaa", "abab", "bbbb") (= -v2aijb - "aaaa", "bbbb") (= -v2iabj - "aaaa", "bbbb")  (= v2aijb - "abab",) (= v2iabj - "abab")  
-                elif("h" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1] and "p" in Op_CA_list[_][2] and "p" in Op_CA_list[_][3]):
-                    op_str = op_str.replace("v2(","v2iajb(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][1], Op_CA_list[_][3])
-
-                elif("p" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1] and "h" in Op_CA_list[_][2] and "h" in Op_CA_list[_][3]):    
-                    if Operator == "VAB":
-                        op_str = op_str.replace("abab","baba")
-                    op_str = op_str.replace("v2(","v2iajb(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][2], Op_CA_list[_][0],Op_CA_list[_][3], Op_CA_list[_][1])
-
-                elif("h" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1] and "p" in Op_CA_list[_][2] and "h" in Op_CA_list[_][3]):    
-                    op_str = op_str.replace("v2(","v2iajb(")
-                    if Operator == "VAA" or Operator == "VBB":
-                        flipsign = True
-                        op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][3], Op_CA_list[_][1])
-                    elif Operator == "VAB":
-                        op_str = op_str.replace("abab","abba")
-                        op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][3], Op_CA_list[_][1])
-
-                elif("p" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1] and "h" in Op_CA_list[_][2] and "p" in Op_CA_list[_][3]):    
-                    op_str = op_str.replace("v2(","v2iajb(")
-                    if Operator == "VAA" or Operator == "VBB":
-                        flipsign = True
-                        op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][3],Op_CA_list[_][2], Op_CA_list[_][0])
-                    elif Operator == "VAB":
-                        op_str = op_str.replace("abab","abba")
-                        op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][3],Op_CA_list[_][2], Op_CA_list[_][0])
-
-                # v2ijab(=v2abij) - "aaaa", "abab", "bbbb" 
-                elif("h" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1] and "h" in Op_CA_list[_][2] and "p" in Op_CA_list[_][3]):
-                    op_str = op_str.replace("v2(","v2ijab(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][1], Op_CA_list[_][3])
-                elif("p" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1] and "p" in Op_CA_list[_][2] and "h" in Op_CA_list[_][3]):
-                    op_str = op_str.replace("v2(","v2ijab(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][3],Op_CA_list[_][0], Op_CA_list[_][2])
-
-                # v2iabc(=v2aicb)(=v2bcia)(=v2cbai) - "aaaa", "abab", "baba", "bbbb" 
-                elif("h" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1] and "p" in Op_CA_list[_][2] and "p" in Op_CA_list[_][3]):
-                    op_str = op_str.replace("v2(","v2iabc(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][1], Op_CA_list[_][3])
-                
-                elif("p" in Op_CA_list[_][0] and "h" in Op_CA_list[_][1] and "p" in Op_CA_list[_][2] and "p" in Op_CA_list[_][3]):
-                    op_str = op_str.replace("v2(","v2iabc(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][3],Op_CA_list[_][0], Op_CA_list[_][2])
-
-                elif("p" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1] and "h" in Op_CA_list[_][2] and "p" in Op_CA_list[_][3]):
-                    if Operator == "VAB":
-                        op_str = op_str.replace("abab","baba")
-                    op_str = op_str.replace("v2(","v2iabc(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][2], Op_CA_list[_][0],Op_CA_list[_][3], Op_CA_list[_][1])
-
-                elif("p" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1] and "p" in Op_CA_list[_][2] and "h" in Op_CA_list[_][3]):
-                    if Operator == "VAB":
-                        op_str = op_str.replace("abab","baba")
-                    op_str = op_str.replace("v2(","v2iabc(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][3], Op_CA_list[_][1],Op_CA_list[_][2], Op_CA_list[_][0])  
-
-                # v2abcd - "aaaa", "abab", "bbbb" 
-                elif("p" in Op_CA_list[_][0] and "p" in Op_CA_list[_][1] and "p" in Op_CA_list[_][2] and "p" in Op_CA_list[_][3]):
-                    op_str = op_str.replace("v2(","v2abcd(")
-                    op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][1], Op_CA_list[_][3])
-
-                else:
-                    print("Have not coded up this", Operator, Op_CA_list[_])
-
-            elif Operator in ["T1A","T1B","Y1A+","Y1B+"]:
-                op_str = op_str + '({}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][1])
-
-            elif Operator in ["T1A+","T1B+"]:
-                op_str = op_str + '({}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][0])
-
-            elif Operator in ["T2AA","T2AB","T2BB","Y2AA+","Y2AB+","Y2BB+"]:
-                op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][0], Op_CA_list[_][2],Op_CA_list[_][1], Op_CA_list[_][3])
-
-            elif Operator in ["T2AA+","T2AB+","T2BB+"]:
-                op_str = op_str + '({}, {}, {}, {})'.format(Op_CA_list[_][1], Op_CA_list[_][3],Op_CA_list[_][0], Op_CA_list[_][2])
-
-            else:
-                print("Have not programmed, ",operator)
-
-            if _ != len(Op_CA_list)-1:
-                eqn_str = eqn_str + op_str + " * "
-            else: 
-                eqn_str = eqn_str + op_str
-
-        if flipsign:
-            if "-" in eqn_str:
-                eqn_str = eqn_str.replace("-","")
-            elif "-" not in eqn_str:
-                eqn_str = "-"+eqn_str
-
-    eqn_str = remove_last_star(eqn_str)
-
-    # MUST BE REMOVED. ONLY FOR INTERMEDIATES
-    if "-" in eqn_str:
-        eqn_str = eqn_str.replace("-","")
-    elif "-" not in eqn_str:
-        eqn_str = "-"+eqn_str
-
-    print(eqn_str) 
-
-# %%
-
-
-
+print("\nFINAL EQUATIONS ")
+for equation in Final_Equations:
+    print(equation)
