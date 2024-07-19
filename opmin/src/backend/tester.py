@@ -1,5 +1,6 @@
-from error import BackEndError
+from .error import BackEndError
 from ast.absyn import ArrayDecl, RangeDecl, IndexDecl, AssignStmt, Array, Addition, Multiplication
+from functools import reduce
 
 
 __RANGE_VALUE = 2
@@ -32,8 +33,8 @@ def __testCompElem(orig_comp_elem, opt_comp_elem):
         f.write(code)
         f.close()
     except:
-        print 'error: cannot generate testing files: %s' % __FILE_NAME
-        print 'warning: testing phase is skipped'
+        print('error: cannot generate testing files: %s' % __FILE_NAME)
+        print('warning: testing phase is skipped')
 
     # import testing module
     mod = __import__(__MODULE_NAME)
@@ -80,9 +81,9 @@ def __generateHeader():
 
 def __generateDecl(input_arrs_tab, range_tab):
     code = ''
-    for (r, v) in range_tab.iteritems():
+    for (r, v) in range_tab.items():
         code += ' ' + str(r) + ' = ' + str(v) + '\n'
-    for (a, rs) in input_arrs_tab.iteritems():
+    for (a, rs) in input_arrs_tab.items():
         code += ' ' + str(a) + __INPUT_ARR_SUFFIX + ' = makeArray([' + ','.join(map(str, rs)) + '], True) \n'
     return code
 
@@ -98,14 +99,14 @@ def __generateEq(comp_elem, vname_generator, input_arrs_tab):
 
 def __generateResultStoring(result_arrs_tab, suffix):
     code = '\n'
-    for (a, r) in result_arrs_tab.iteritems():
+    for (a, r) in result_arrs_tab.items():
         code += ' ' + str(a) + suffix + ' = replicateArray(' + str(a) + ') \n'
     return code
 
 
 def __generateComparisons(result_arrs_tab, suffix1, suffix2):
     code = ''
-    for (a, r) in result_arrs_tab.iteritems():
+    for (a, r) in result_arrs_tab.items():
         code += ' print ' + str(a) + suffix1 + '\n'
         code += ' print ' + str(a) + suffix2 + '\n'
         code += ' if (' + str(a) + suffix1 + ' != ' + str(a) + suffix2 + '): \n'
@@ -167,14 +168,13 @@ def __generateExp(e, index_tab, vname_generator, input_arrs_tab, code_seq):
         if (e.coef != 1):
             raise BackEndError('%s: coefficient of an addition must be 1' % __name__)
 
-        upper_ranges = map(lambda x: index_tab[x], e.upper_inds)
-        lower_ranges = map(lambda x: index_tab[x], e.lower_inds)
+        upper_ranges = [index_tab[x] for x in e.upper_inds]
+        lower_ranges = [index_tab[x] for x in e.lower_inds]
         tmp_arr_decl = ArrayDecl(vname_generator.generate(), upper_ranges, lower_ranges, [], [])
 
         tmp_arr_ref = Array(tmp_arr_decl.name, 1, e.upper_inds, e.lower_inds, [])
         lhs = __generateExp(tmp_arr_ref, index_tab, vname_generator, input_arrs_tab, code_seq)
-        rhs = ' + '.join(map(
-            lambda x: '(' + __generateExp(x, index_tab, vname_generator, input_arrs_tab, code_seq) + ')', e.subexps)
+        rhs = ' + '.join(['(' + __generateExp(x, index_tab, vname_generator, input_arrs_tab, code_seq) + ')' for x in e.subexps]
         )
         body = lhs + ' += ' + rhs
 
@@ -182,14 +182,13 @@ def __generateExp(e, index_tab, vname_generator, input_arrs_tab, code_seq):
         code_seq.append(__generateLoop(e.upper_inds + e.lower_inds, body, index_tab))
         code += lhs
     elif (isinstance(e, Multiplication)):
-        upper_ranges = map(lambda x: index_tab[x], e.upper_inds)
-        lower_ranges = map(lambda x: index_tab[x], e.lower_inds)
+        upper_ranges = [index_tab[x] for x in e.upper_inds]
+        lower_ranges = [index_tab[x] for x in e.lower_inds]
         tmp_arr_decl = ArrayDecl(vname_generator.generate(), upper_ranges, lower_ranges, [], [])
 
         tmp_arr_ref = Array(tmp_arr_decl.name, 1, e.upper_inds, e.lower_inds, [])
         lhs = __generateExp(tmp_arr_ref, index_tab, vname_generator, input_arrs_tab, code_seq)
-        rhs = ' * '.join(map(
-            lambda x: '(' + __generateExp(x, index_tab, vname_generator, input_arrs_tab, code_seq) + ')', e.subexps)
+        rhs = ' * '.join(['(' + __generateExp(x, index_tab, vname_generator, input_arrs_tab, code_seq) + ')' for x in e.subexps]
         )
         if (e.coef == -1):
             rhs = '-(' + rhs + ')'
@@ -228,13 +227,13 @@ def __collectDeclInfo(ce):
         __collectElem(e, input_arrs_tab, result_arrs_tab, range_tab)
 
     tmp = {}
-    for (k, v) in input_arrs_tab.iteritems():
+    for (k, v) in input_arrs_tab.items():
         if (v[0] == __REFERENCED):
             tmp[k] = v[1]
     input_arrs_tab = tmp
 
     tmp = {}
-    for (k, v) in result_arrs_tab.iteritems():
+    for (k, v) in result_arrs_tab.items():
         if (v[0] == __ASSIGNED):
             tmp[k] = v[1]
     result_arrs_tab = tmp

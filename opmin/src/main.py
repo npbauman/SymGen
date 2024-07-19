@@ -8,38 +8,38 @@ import backend.main
 
 
 def main():
-    print '****** OPMIN starts ******'
-    print ''
+    print('****** OPMIN starts ******')
+    print('')
 
     (ifnames, use_cse, use_fact, use_refine) = __readCommandLineArguments()
     ofnames = __createOutputFilenames(ifnames)
 
     for ifname, ofname in zip(ifnames, ofnames):
-        print '=== Processing file: "%s" ===' % ifname
+        print('=== Processing file: "%s" ===' % ifname)
 
         # frontend
-        print '--- Start input reading and pre-processing ---'
+        print('--- Start input reading and pre-processing ---')
         original_trans_unit = frontend.main.main(ifname)
-        print '--- Finished input reading and pre-processing ---'
+        print('--- Finished input reading and pre-processing ---')
 
-        print '--- Unoptimized equation ---'
+        print('--- Unoptimized equation ---')
 
         # optimizer
-        print '--- Start optimization ---'
+        print('--- Start optimization ---')
         optimized_trans_unit = optimizer.main.main(original_trans_unit.replicate(), use_cse, use_fact, use_refine)
-        print '--- Finished optimization ---'
+        print('--- Finished optimization ---')
 
         # print '--- Optimized equation ---'
         # print str(optimized_trans_unit)
 
         # backend
-        print '--- Start output writing ---'
+        print('--- Start output writing ---')
         backend.main.main(original_trans_unit, optimized_trans_unit, ofname)
-        print '--- Finished output writing ---'
+        print('--- Finished output writing ---')
 
-        print ''
+        print('')
 
-    print '****** OPMIN finishes ******'
+    print('****** OPMIN finishes ******')
 
 
 def __readCommandLineArguments():
@@ -48,7 +48,7 @@ def __readCommandLineArguments():
 
     ifnames = args
     if (len(ifnames) == 0):
-        print 'error: no input files defined'
+        print('error: no input files defined')
         sys.exit(-1)
 
     for ifname in ifnames:
@@ -56,7 +56,7 @@ def __readCommandLineArguments():
             f = open(ifname, 'r')
             f.close()
         except:
-            print 'error: cannot open input file: %s' % ifname
+            print('error: cannot open input file: %s' % ifname)
             sys.exit(-1)
 
     use_cse = options.use_cse
@@ -75,7 +75,7 @@ def __createOutputFilenames(ifnames):
             f = open(o, 'w')
             f.close()
         except:
-            print 'error: cannot open output file: %s' % o
+            print('error: cannot open output file: %s' % o)
             sys.exit(-1)
         ofnames.append(o)
     return ofnames

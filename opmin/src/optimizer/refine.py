@@ -6,7 +6,7 @@ from ast.absyn import (
     Multiplication,
 )
 from ast.absyn_lib import renameIndices, buildRenamingTable, extendRenamingTable
-from math import gcd
+from .math import gcd
 
 
 def updateFAC(comp_elem, stmt_tab, index_tab, volatile_tab, iteration, range_tab):
@@ -28,7 +28,7 @@ def updateFAC(comp_elem, stmt_tab, index_tab, volatile_tab, iteration, range_tab
             l_coef = add.rhs.subexps[0].coef
             r_coef = add.rhs.subexps[1].coef
 
-            if l_name and r_name in stmt_tab.arr_map.keys():
+            if l_name and r_name in list(stmt_tab.arr_map.keys()):
 
                 left_o = stmt_tab.arr_map[l_name]
                 right_o = stmt_tab.arr_map[r_name]
@@ -251,9 +251,9 @@ def collectFactor(term, stmt_tab, sum_ref):
         term.rhs.sum_inds.extend(sum_ref)
         (m1, sym1) = __symbolizeMult(term.rhs)
         factors.extend(sym1)
-        if sub1.name in stmt_tab.arr_map.keys():
+        if sub1.name in list(stmt_tab.arr_map.keys()):
             factors.extend(collectFactor(stmt_tab.arr_map[sub1.name], stmt_tab, sum_ref))
-        if sub2.name in stmt_tab.arr_map.keys():
+        if sub2.name in list(stmt_tab.arr_map.keys()):
             factors.extend(collectFactor(stmt_tab.arr_map[sub2.name], stmt_tab, sum_ref))
 
     return factors
@@ -327,7 +327,7 @@ def refineTop(comp_elem, stmt_tab, index_tab, volatile_tab, iteration, range_tab
                         l_coef = le.coef
                         r_coef = rt.coef
 
-                        if l_name and r_name in stmt_tab.arr_map.keys():
+                        if l_name and r_name in list(stmt_tab.arr_map.keys()):
 
                             left_o = stmt_tab.arr_map[l_name]
                             right_o = stmt_tab.arr_map[r_name]
@@ -407,11 +407,11 @@ def __symbolizeMult(mult):
 
 
 def __createArrayDecl(arr, range_tab):
-    upper_ranges = map(lambda x: range_tab[x], arr.upper_inds)
-    lower_ranges = map(lambda x: range_tab[x], arr.lower_inds)
+    upper_ranges = [range_tab[x] for x in arr.upper_inds]
+    lower_ranges = [range_tab[x] for x in arr.lower_inds]
     inds = arr.upper_inds + arr.lower_inds
-    sym_groups = [map(lambda x: inds.index(x), g) for g in arr.sym_groups]
-    vsym_groups = [map(lambda x: inds.index(x), g) for g in arr.vsym_groups]
+    sym_groups = [[inds.index(x) for x in g] for g in arr.sym_groups]
+    vsym_groups = [[inds.index(x) for x in g] for g in arr.vsym_groups]
     for g in sym_groups:
         g.sort()
     sym_groups.sort()
@@ -426,7 +426,7 @@ def __getArraySymbol(arr, sum_inds):
     from_inds = []
     to_inds = []
     for g in r_arr.sym_groups:
-        original_inds = filter(lambda x: x in g, inds)
+        original_inds = [x for x in inds if x in g]
         exts = []
         sums = []
         for i in original_inds:

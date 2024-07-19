@@ -1,18 +1,18 @@
-from error import BackEndError
+from .error import BackEndError
 from ast.absyn import Decl, RangeDecl, IndexDecl, ArrayDecl, ExpandDecl, VolatileDecl,\
      IterationDecl, Stmt, AssignStmt, Array, Addition, Multiplication
 
 
 def unparse(trans_unit):
     trans_unit = trans_unit.replicate()
-    return '\n'.join(map(lambda x: '\n' + unparseCompElem(x), trans_unit.comp_elems))
+    return '\n'.join(['\n' + unparseCompElem(x) for x in trans_unit.comp_elems])
 
 
 def unparseCompElem(comp_elem):
     elems = __combineDecls(comp_elem.elems)
 
     s = '{'
-    s += ''.join(map(lambda x: '\n ' + __unparseElem(x), elems))
+    s += ''.join(['\n ' + __unparseElem(x) for x in elems])
     if (len(elems) > 0):
         s += '\n'
     s += '}'
@@ -48,7 +48,7 @@ def __unparseDecl(d):
 def __unparseRangeDecl(d):
     s = ''
     s += 'range '
-    s += ', '.join(map(lambda x: str(x.name), d.decls))
+    s += ', '.join([str(x.name) for x in d.decls])
     s += ' = '
     s += str(d.value)
     s += ';'
@@ -58,7 +58,7 @@ def __unparseRangeDecl(d):
 def __unparseIndexDecl(d):
     s = ''
     s += 'index '
-    s += ', '.join(map(lambda x: str(x.name), d.decls))
+    s += ', '.join([str(x.name) for x in d.decls])
     s += ' = ' + str(d.range) + ';'
     return s
 
@@ -74,13 +74,13 @@ def __unparseArrayDecl(d):
         sym = ''
         for g in a.sym_groups:
             if (len(g) > 1):
-                sym += '(' + ','.join(map(lambda x: str(int(x)), g)) + ')'
+                sym += '(' + ','.join([str(int(x)) for x in g]) + ')'
         if (sym != ''):
             s += ':' + sym
         vsym = ''
         for g in a.vsym_groups:
             if (len(g) > 1):
-                vsym += '<' + ','.join(map(lambda x: str(int(x)), g)) + '>'
+                vsym += '<' + ','.join([str(int(x)) for x in g]) + '>'
         if (vsym != ''):
             s += ':' + vsym
         s += ')'
@@ -96,7 +96,7 @@ def __unparseArrayDecl(d):
 def __unparseExpandDecl(d):
     s = ''
     s += 'expand '
-    s += ', '.join(map(lambda x: str(x.arr), d.decls))
+    s += ', '.join([str(x.arr) for x in d.decls])
     s += ';'
     return s
 
@@ -104,7 +104,7 @@ def __unparseExpandDecl(d):
 def __unparseVolatileDecl(d):
     s = ''
     s += 'volatile '
-    s += ', '.join(map(lambda x: str(x.arr), d.decls))
+    s += ', '.join([str(x.arr) for x in d.decls])
     s += ';'
     return s
 

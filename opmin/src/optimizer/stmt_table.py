@@ -1,8 +1,8 @@
-from error import OptimizerError
+from .error import OptimizerError
 from ast.absyn import Array, Addition, Multiplication
 from ast.absyn_lib import renameIndices, buildRenamingTable
-from cost_model import countOpCost
-from canon import canonicalizeExp
+from .cost_model import countOpCost
+from .canon import canonicalizeExp
 
 
 class ResultInfo:
@@ -49,27 +49,27 @@ class StmtTable:
         self.use_common_subexp = False
 
     def getAllIntermediateNames(self):
-        inter_names = self.arr_map.keys()
+        inter_names = list(self.arr_map.keys())
         inter_names.sort(lambda x, y: compareInterNames(x, y))
         return inter_names
 
     def getAllIntermediateExps(self):
         exps = []
-        for k in self.arr_map.keys():
+        for k in list(self.arr_map.keys()):
             exp = self.arr_map[k].rhs
             exps.append(exp)
         return exps
 
     def getAllIntermediateCosts(self):
         costs = []
-        for k in self.arr_map.keys():
+        for k in list(self.arr_map.keys()):
             cost = self.arr_map[k].op_cost
             costs.append(cost)
         return costs
 
     def getAllIntermediateCanonicalForms(self):
         cfs = []
-        for k in self.arr_map.keys():
+        for k in list(self.arr_map.keys()):
             exp = self.arr_map[k].rhs
             can_forms_info = canonicalizeExp(exp)
             (cf, to_inds) = can_forms_info[0]
@@ -77,7 +77,7 @@ class StmtTable:
         return cfs
 
     def getVolatileIntermediateNames(self, arr_names):
-        return filter(lambda x: self.arr_map[x].is_volatile, arr_names)
+        return [x for x in arr_names if self.arr_map[x].is_volatile]
 
     def getOrderedInfos(self, leading_arr_names, arr_names):
         sequence = []
@@ -95,7 +95,7 @@ class StmtTable:
             assert(leading is not None), '%s: a leading array must exist' % __name__
             sequence.append(leading)
             del arr_names[arr_names.index(leading)]
-        return map(lambda x: self.arr_map[x], sequence)
+        return [self.arr_map[x] for x in sequence]
 
     def getCostForIntermediateNames(self, i_arr_names):
         cost = 0
@@ -104,7 +104,7 @@ class StmtTable:
         return cost
 
     def getRhs(self, arr):
-        if (self.arr_map.has_key(arr.name)):
+        if (arr.name in self.arr_map):
             info = self.arr_map[arr.name]
             rhs = info.rhs.replicate()
             from_inds = info.lhs.upper_inds + info.lhs.lower_inds
@@ -117,7 +117,7 @@ class StmtTable:
             return None
 
     def getCf(self, arr_name):
-        if (self.arr_map.has_key(arr_name)):
+        if (arr_name in self.arr_map):
             exp = self.arr_map[arr_name].rhs
             can_forms_info = canonicalizeExp(exp)
             return can_forms_info
@@ -125,14 +125,14 @@ class StmtTable:
             return None
 
     def getCost(self, arr_name):
-        if self.arr_map.has_key(arr_name):
+        if arr_name in self.arr_map:
             return self.arr_map[arr_name].op_cost
         else:
             return None
 
     def updateSame(self, a1, a2):  # change a2 to a1
-        if self.arr_map.has_key(a1.name) and self.arr_map.has_key(a2.name):
-            for k in self.arr_map.keys():
+        if a1.name in self.arr_map and a2.name in self.arr_map:
+            for k in list(self.arr_map.keys()):
                 this = self.arr_map[k]
                 if this.lhs.name == a2.name:
                     del self.arr_map[this.lhs.name]
@@ -175,10 +175,10 @@ class StmtTable:
 
         (cf, to_inds) = can_forms_info[0]
 
-        if (self.can_map.has_key(cf)):
+        if (cf in self.can_map):
             info = self.can_map[cf]
         else:
-            (can_forms, from_maps) = zip(*can_forms_info)
+            (can_forms, from_maps) = list(zip(*can_forms_info))
             info = __insertInfoForExp(
                 self, self, exp, list(can_forms), list(from_maps), index_tab, volatile_tab, iteration)
 
@@ -187,7 +187,7 @@ class StmtTable:
 
     def updateWithStmtTab(self, stmt_tab, i_arr_name_set):
         for a in i_arr_name_set:
-            if (not self.arr_map.has_key(a)):
+            if (a not in self.arr_map):
                 info = stmt_tab.arr_map[a]
                 if (self.use_common_subexp):
                     for cf in info.can_forms:
@@ -229,7 +229,7 @@ class StmtTable:
         i_arr_name_set = set([])
         volatile_list = []
         for a in set(arr_names):
-            if (stmt_tab.arr_map.has_key(a)):
+            if (a in stmt_tab.arr_map):
                 info = stmt_tab.arr_map[a]
                 i_arr_name_set |= set([a]) | info.i_arr_name_set
                 if (info.is_volatile):
@@ -281,7 +281,7 @@ class UsageTable:
 
     def insertInfos(self, infos):
         for i in infos:
-            if (not self.stmt_tab.arr_map.has_key(i.lhs.name)):
+            if (i.lhs.name not in self.stmt_tab.arr_map):
                 if (self.stmt_tab.use_common_subexp):
                     for cf in i.can_forms:
                         self.stmt_tab.can_map[cf] = i
@@ -290,20 +290,20 @@ class UsageTable:
     def removeIntermediates(self, i_arrs, mults):
         def __makeRefMap(stmt_tab, top_arefs):
             all_arefs = top_arefs[:]
-            for (a, i) in stmt_tab.arr_map.iteritems():
+            for (a, i) in stmt_tab.arr_map.items():
                 all_arefs.extend(getARefNames(i.rhs))
 
             ref_map = {}
             for a in all_arefs:
-                if (stmt_tab.arr_map.has_key(a)):
-                    if (ref_map.has_key(a)):
+                if (a in stmt_tab.arr_map):
+                    if (a in ref_map):
                         ref_map[a] += 1
                     else:
                         ref_map[a] = 1
             return ref_map
 
         def __remove(stmt_tab, ref_map, aref):
-            if (stmt_tab.arr_map.has_key(aref)):
+            if (aref in stmt_tab.arr_map):
                 if (ref_map[aref] == 1):
                     info = stmt_tab.arr_map[aref]
                     if (stmt_tab.use_common_subexp):
@@ -323,7 +323,7 @@ class UsageTable:
 
         def_map = {}
         for m_a in mult_arrs:
-            if (self.stmt_tab.arr_map.has_key(m_a)):
+            if (m_a in self.stmt_tab.arr_map):
                 info = self.stmt_tab.arr_map[m_a]
                 intm_infos = [info]
                 for i_a in info.i_arr_name_set:

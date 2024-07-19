@@ -1,10 +1,10 @@
-import const_folder
-import error
-import expander
-import flattener
-import parser
-import semant
-import translator
+from . import const_folder
+from . import error
+from . import expander
+from . import flattener
+from . import parser
+from . import semant
+from . import translator
 
 
 def main(ifname):

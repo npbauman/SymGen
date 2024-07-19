@@ -1,5 +1,5 @@
-from error import FrontEndError
-from absyn import (
+from .error import FrontEndError
+from .absyn import (
     Decl,
     Stmt,
     AssignStmt,

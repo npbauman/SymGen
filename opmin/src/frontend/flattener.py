@@ -1,5 +1,5 @@
-from error import FrontEndError
-from absyn import (
+from .error import FrontEndError
+from .absyn import (
     Decl,
     RangeDecl,
     IndexDecl,
@@ -16,7 +16,7 @@ from absyn import (
     Addition,
     Multiplication
 )
-from absyn_lib import getIndices, getSumIndices
+from .absyn_lib import getIndices, getSumIndices
 
 
 def flatten(trans_unit):
@@ -199,11 +199,11 @@ def __numberAddition(e, number_tab, vname_generator):
 def __numberMultiplication(e, number_tab, vname_generator):
     e.subexps = [__numberExp(se, number_tab, vname_generator) for se in e.subexps]
 
-    sum_inames = map(lambda x: x.name, getSumIndices(e))
+    sum_inames = [x.name for x in getSumIndices(e)]
     number_inames = [vname_generator.generate() for i in range(0, len(sum_inames))]
-    __renameIndices(e, dict(zip(sum_inames, number_inames)))
+    __renameIndices(e, dict(list(zip(sum_inames, number_inames))))
 
-    tab = dict(zip(number_inames, sum_inames))
+    tab = dict(list(zip(number_inames, sum_inames)))
     number_tab.update(tab)
 
     return e
@@ -243,11 +243,11 @@ def __unnumberMultiplication(e, symtab, number_tab, new_index_decls):
             raise FrontEndError('%s: expression is not fully flattened' % __name__)
 
     range_tab = {}
-    for (k, v) in symtab.range_tab.iteritems():
+    for (k, v) in symtab.range_tab.items():
         range_tab[k] = v[:]
 
-    ext_inames = map(lambda x: x.name, getIndices(e))
-    sum_inames = map(lambda x: x.name, getSumIndices(e))
+    ext_inames = [x.name for x in getIndices(e)]
+    sum_inames = [x.name for x in getSumIndices(e)]
     to_inames = []
 
     for i in ext_inames:
@@ -265,7 +265,7 @@ def __unnumberMultiplication(e, symtab, number_tab, new_index_decls):
             t = range_tab[r].pop(0)
         to_inames.append(t)
 
-    __renameIndices(e, dict(zip(sum_inames, to_inames)))
+    __renameIndices(e, dict(list(zip(sum_inames, to_inames))))
 
     return e
 

@@ -1,8 +1,8 @@
-from combination import getAllCombinations, getTwoCombinations
-from error import OptimizerError
+from .combination import getAllCombinations, getTwoCombinations
+from .error import OptimizerError
 from ast.absyn import Array, Multiplication
 from ast.absyn_lib import renameIndices, buildRenamingTable
-from stmt_table import StmtTable
+from .stmt_table import StmtTable
 
 
 def optimize(mult, stmt_tab, index_tab, volatile_tab, iteration):
@@ -47,7 +47,7 @@ def __exhaustiveSearch(subexps, index_tab, volatile_tab, iteration, stmt_tab, gl
                 i_arr = subexps[cur_comb[0]].replicate()
                 storage_tab[str(cur_comb)] = __ResultInfo([i_arr], None)
             elif (cur_size == 2):
-                cur_subexps = map(lambda x: subexps[x].replicate(), cur_comb)
+                cur_subexps = [subexps[x].replicate() for x in cur_comb]
                 mult = Multiplication(cur_subexps)
                 mult.setOps(global_sym_groups)
                 info = stmt_tab.getInfoForExp(mult, index_tab, volatile_tab, iteration)
@@ -73,8 +73,8 @@ def __exhaustiveSearch(subexps, index_tab, volatile_tab, iteration, stmt_tab, gl
                         up_bound = len(left_combs)
 
                     for i in range(0, up_bound):
-                        left_key = map(lambda x: cur_comb[x], left_combs[i])    # find left key in cur_comb
-                        right_key = map(lambda x: cur_comb[x], right_combs[i])  # find right key in cur_comb
+                        left_key = [cur_comb[x] for x in left_combs[i]]    # find left key in cur_comb
+                        right_key = [cur_comb[x] for x in right_combs[i]]  # find right key in cur_comb
 
                         left_res_info = storage_tab[str(left_key)]
                         right_res_info = storage_tab[str(right_key)]
@@ -102,7 +102,7 @@ def __exhaustiveSearch(subexps, index_tab, volatile_tab, iteration, stmt_tab, gl
 
     res_info = storage_tab[str(combinations[size][0])]
     stmt_tabs = [stmt_tab] * len(res_info.i_arrs)
-    return zip(res_info.i_arrs, res_info.infos, stmt_tabs)
+    return list(zip(res_info.i_arrs, res_info.infos, stmt_tabs))
 
 
 class __ResultInfo:
@@ -212,7 +212,7 @@ def __greedySearch(trees, index_tab, volatile_tab, iteration, stmt_tab, global_s
     best_profit = None
 
     for cur_comb in getTwoCombinations(size):
-        tree = Multiplication(map(lambda x: trees[x].replicate(), cur_comb))
+        tree = Multiplication([trees[x].replicate() for x in cur_comb])
         tree.setOps(global_sym_groups)
         (i_arr, info) = __flattenTree(tree, index_tab, volatile_tab, iteration, stmt_tab, global_sym_groups)
 
@@ -269,7 +269,7 @@ def __getNeighborsWithinDistance(trees, distance, index_tab, volatile_tab, itera
         for cur_tree in iter_trees:
             (cur_i_arr, cur_info) = __flattenTree(
                 cur_tree, index_tab, volatile_tab, iteration, stmt_tab, global_sym_groups)
-            if (not visited.has_key(cur_i_arr.name)):
+            if (cur_i_arr.name not in visited):
                 visited[cur_i_arr.name] = None
                 if (i > 0):
                     results.append(cur_tree)
@@ -278,7 +278,7 @@ def __getNeighborsWithinDistance(trees, distance, index_tab, volatile_tab, itera
 
     for cur_tree in iter_trees:
         (cur_i_arr, cur_info) = __flattenTree(cur_tree, index_tab, volatile_tab, iteration, stmt_tab, global_sym_groups)
-        if (not visited.has_key(cur_i_arr.name)):
+        if (cur_i_arr.name not in visited):
             visited[cur_i_arr.name] = None
             results.append(cur_tree)
 

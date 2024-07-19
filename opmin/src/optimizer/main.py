@@ -1,4 +1,4 @@
-import optimizer
+from . import optimizer
 
 
 def main(trans_unit, use_cse, use_fact, use_refine):

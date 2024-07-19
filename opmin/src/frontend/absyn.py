@@ -58,7 +58,7 @@ class TranslationUnit(Absyn):
         return TranslationUnit(r_comp_elems)
 
     def __repr__(self):
-        return '\n'.join(map(lambda x: '\n' + str(x), self.comp_elems))
+        return '\n'.join(['\n' + str(x) for x in self.comp_elems])
 
 #-----------------------------------------
 
@@ -73,7 +73,7 @@ class CompoundElem(Absyn):
 
     def __repr__(self):
         s = '{'
-        s += ''.join(map(lambda x: '\n  ' + str(x), self.elems))
+        s += ''.join(['\n  ' + str(x) for x in self.elems])
         if (len(self.elems) > 0):
             s += '\n'
         s += '}'
@@ -325,7 +325,7 @@ class Array(Exp):
         s += str(self.name)
         if (len(self.inds) > 0):
             s += '['
-            s += ','.join(map(lambda x: str(x.name), self.inds))
+            s += ','.join([str(x.name) for x in self.inds])
             s += ']'
         if (self.coef != -1 and self.coef != 1):
             s += ')'

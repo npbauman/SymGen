@@ -1,6 +1,6 @@
-from error import FrontEndError
+from .error import FrontEndError
 import ast.absyn
-import absyn
+from . import absyn
 
 
 def translate(trans_unit):
@@ -46,8 +46,8 @@ def __translateIndexDecl(d, array_tab):
 
 
 def __translateArrayDecl(d, array_tab):
-    up_ranges = map(lambda x: x.name, d.upper_ranges)
-    lo_ranges = map(lambda x: x.name, d.lower_ranges)
+    up_ranges = [x.name for x in d.upper_ranges]
+    lo_ranges = [x.name for x in d.lower_ranges]
     partial_sgroups = [[int(i.value) for i in g] for g in d.sym_groups]
     full_sgroups = []
     for i in range(len(up_ranges + lo_ranges)):
@@ -117,11 +117,11 @@ def __translateNumConst(e, array_tab):
 
 def __translateArray(e, array_tab):
     (num_of_up_ranges, num_sgroups, num_vsgroups) = array_tab[e.name]
-    inds = map(lambda x: x.name, e.inds)
+    inds = [x.name for x in e.inds]
     up_inds = inds[:num_of_up_ranges]
     lo_inds = inds[num_of_up_ranges:]
-    ind_sgroups = [map(lambda x: inds[x], g) for g in num_sgroups]
-    ind_vsgroups = [map(lambda x: inds[x], g) for g in num_vsgroups]
+    ind_sgroups = [[inds[x] for x in g] for g in num_sgroups]
+    ind_vsgroups = [[inds[x] for x in g] for g in num_vsgroups]
     return ast.absyn.Array(e.name, e.coef, up_inds, lo_inds, ind_sgroups, ind_vsgroups)
 
 

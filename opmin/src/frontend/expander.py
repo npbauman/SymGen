@@ -1,5 +1,5 @@
-from error import FrontEndError
-from absyn import (
+from .error import FrontEndError
+from .absyn import (
     Decl,
     RangeDecl,
     IndexDecl,
@@ -15,7 +15,7 @@ from absyn import (
     Addition,
     Multiplication
 )
-from absyn_lib import getIndices, getSumIndices
+from .absyn_lib import getIndices, getSumIndices
 
 
 def expand(trans_unit):
@@ -126,13 +126,13 @@ def __expandNumConst(e, symtab):
 
 
 def __expandArray(e, symtab):
-    if (e.name in symtab.expand_list and symtab.assign_tab.has_key(e.name)):
+    if (e.name in symtab.expand_list and e.name in symtab.assign_tab):
         a_stmt = symtab.assign_tab[e.name]
         expanded = a_stmt.rhs.replicate()
         expanded.multiplyCoef(e.coef)
 
-        from_inames = map(lambda x: x.name, getIndices(a_stmt.lhs))
-        to_inames = map(lambda x: x.name, getIndices(e))
+        from_inames = [x.name for x in getIndices(a_stmt.lhs)]
+        to_inames = [x.name for x in getIndices(e)]
         ren_tab = __buildRenamingTable(from_inames, to_inames)
         __renameIndices(expanded, ren_tab)
 
@@ -160,12 +160,12 @@ def __renameIndices(e, ren_tab):
         for i in e.inds:
             i.name = ren_tab.get(i.name, i.name)
     elif (isinstance(e, Addition)):
-        ren_tab = __filterRenamingTable(ren_tab, map(lambda x: x.name, getIndices(e)))
+        ren_tab = __filterRenamingTable(ren_tab, [x.name for x in getIndices(e)])
         for se in e.subexps:
             __renameIndices(se, ren_tab)
     elif (isinstance(e, Multiplication)):
-        ren_tab = __filterRenamingTable(ren_tab, map(lambda x: x.name, getIndices(e)))
-        ren_tab = __extendRenamingTable(ren_tab, map(lambda x: x.name, getSumIndices(e)))
+        ren_tab = __filterRenamingTable(ren_tab, [x.name for x in getIndices(e)])
+        ren_tab = __extendRenamingTable(ren_tab, [x.name for x in getSumIndices(e)])
         for se in e.subexps:
             __renameIndices(se, ren_tab)
     else:
@@ -182,7 +182,7 @@ def __buildRenamingTable(from_inames, to_inames):
 
 def __filterRenamingTable(ren_tab, inames):
     filtered_ren_tab = {}
-    for (f, t) in ren_tab.iteritems():
+    for (f, t) in ren_tab.items():
         if (f in inames):
             filtered_ren_tab[f] = t
     return filtered_ren_tab
@@ -192,12 +192,12 @@ def __extendRenamingTable(ren_tab, sum_inames):
     ren_tab = ren_tab.copy()
     if (len(sum_inames) > 0):
         reversed_ren_tab = {}
-        for (f, t) in ren_tab.iteritems():
+        for (f, t) in ren_tab.items():
             reversed_ren_tab[t] = f
         for i in sum_inames:
             cur_i = i
             visited = [i]
-            while (reversed_ren_tab.has_key(cur_i)):
+            while (cur_i in reversed_ren_tab):
                 cur_i = reversed_ren_tab[cur_i]
                 if (cur_i in visited):
                     raise FrontEndError('%s: an illegal cycle is present in renaming table' % __name__)

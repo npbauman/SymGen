@@ -1,15 +1,16 @@
-import single_term_opt
+from . import single_term_opt
 from time import time
-from error import OptimizerError
+from .error import OptimizerError
 from ast.absyn import ArrayDecl, VolatileDecl, IterationDecl, RangeDecl, IndexDecl, \
      AssignStmt, Array, Addition, Multiplication
-from cost_model import countOpCost
+from .cost_model import countOpCost
 from ast.absyn_lib import renameIndices, buildRenamingTable, extendRenamingTable
-from stmt_table import StmtTable, UsageTable
-from combination import getTwoCombinations
-from refine import updateCSE, updateFAC, refineTop
-from math import gcd
+from .stmt_table import StmtTable, UsageTable
+from .combination import getTwoCombinations
+from .refine import updateCSE, updateFAC, refineTop
+from .math import gcd
 from backend.unparser import unparseCompElem
+from functools import reduce
 
 #--------------------------------------------------------------------
 
@@ -59,16 +60,16 @@ def __optimizeCompElem(comp_elem):
     
     # print cost of original equation
     org_cost = __applyOperationCount(comp_elem, range_tab, index_tab, volatile_tab, iteration)
-    print '----------------------------------------'
-    print '--> total cost of original equation = %s' % org_cost
-    print '----------------------------------------'
+    print('----------------------------------------')
+    print('--> total cost of original equation = %s' % org_cost)
+    print('----------------------------------------')
 
     # apply optimizations
     cost = __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteration)
 
-    print '----------------------------------------'
-    print '--> total cost of optimized equation = %s' % cost
-    print '----------------------------------------'
+    print('----------------------------------------')
+    print('--> total cost of optimized equation = %s' % cost)
+    print('----------------------------------------')
 
 #--------------------------------------------------------------------
 
@@ -118,9 +119,9 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
     # collect terms
     terms = __collectTerms(comp_elem)
     
-    print '----------------------------------------'
-    print '--> total number of terms: %s' % len(terms)
-    print '-------- starts weight-counting --------'
+    print('----------------------------------------')
+    print('--> total number of terms: %s' % len(terms))
+    print('-------- starts weight-counting --------')
     t1 = time()
 
     # create statement table
@@ -129,7 +130,7 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
 
     # apply single-term optimization to count weight for each term
     for (i, t) in enumerate(terms):
-        print '... count weight for %s-th term (out of %s)' % (i+1, len(terms))
+        print('... count weight for %s-th term (out of %s)' % (i+1, len(terms)))
         
         cur_stmt_tab = StmtTable()
         cur_stmt_tab.turnOffCommonSubexp()
@@ -147,8 +148,8 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
         stmt_tab.updateWithStmtTab(cur_stmt_tab, cur_i_arr_names)
 
     t2 = time()
-    print '--> weight-counting time: %s secs' % (t2-t1)
-    print '-------- finished weight-counting --------'
+    print('--> weight-counting time: %s secs' % (t2-t1))
+    print('-------- finished weight-counting --------')
     
     # sort terms from heaviest to lightest
     #terms.sort(lambda x,y: -cmp(x.weight, y.weight))
@@ -159,7 +160,7 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
         stmt_tab = StmtTable()
         stmt_tab.turnOnCommonSubexp()
 
-        print '-------- starts common-subexpression elimination --------'
+        print('-------- starts common-subexpression elimination --------')
         t1 = time()
 
         # common-subexpression elimination
@@ -167,8 +168,8 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
                         __CSE_INTERVAL, __CSE_SOFT_LIMIT, __CSE_HARD_LIMIT, True)
 
         t2 = time()
-        print '--> time for common-subexpression identification: %s secs' % (t2-t1)
-        print '-------- finished common-subexpression elimination --------'
+        print('--> time for common-subexpression identification: %s secs' % (t2-t1))
+        print('-------- finished common-subexpression elimination --------')
 
         # update terms with CSE results
         #print results[0]
@@ -188,15 +189,15 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
         # create usage table
         usage_tab = UsageTable(stmt_tab, top_arefs)
 
-        print '-------- starts factorization --------'
+        print('-------- starts factorization --------')
         t1 = time()
 
         # factorization
         result = __factorize(adds, usage_tab, index_tab, volatile_tab, iteration)
         
         t2 = time()
-        print '--> time for factorization: %s secs' % (t2-t1)
-        print '-------- finished factorization --------'
+        print('--> time for factorization: %s secs' % (t2-t1))
+        print('-------- finished factorization --------')
 
         # update additions with factorization results
         (fact_multi_terms, fact_usage_tab) = result
@@ -223,7 +224,7 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
     
     if (__USE_REFINE):
         
-        print 'cost before refinement', total_cost
+        print('cost before refinement', total_cost)
         curr_cost = total_cost
         
         x=0
@@ -231,16 +232,16 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
             x=x+1
             comp_elem.reArrange()
             
-            print 'start update CSE ...'
+            print('start update CSE ...')
             updateCSE(comp_elem, stmt_tab)
             total_cost = __countCostForCompElem(comp_elem, stmt_tab, index_tab, volatile_tab, iteration, False)    
-            print total_cost
-            print 'end update CSE...'
-            print
+            print(total_cost)
+            print('end update CSE...')
+            print()
         
             #break
 
-            print 'start update FAC ...'
+            print('start update FAC ...')
             #new_comp_elem = comp_elem.replicate()
             #new_stmt_tab = stmt_tab.shallow_copy()
             #updateFAC(new_comp_elem, new_stmt_tab, index_tab, volatile_tab, iteration, range_tab)        
@@ -250,8 +251,8 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
             new_total_cost = __countCostForCompElem(comp_elem, stmt_tab, index_tab, volatile_tab, iteration, False)
             comp_elem.reArrange()
             #print 'new_cost (used if better)', new_total_cost
-            print 'end update FAC...'
-            print
+            print('end update FAC...')
+            print()
             if new_total_cost == total_cost: break
             
             #if new_total_cost != total_cost:
@@ -265,13 +266,13 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
         total_cost = __countCostForCompElem(comp_elem, stmt_tab, index_tab, volatile_tab, iteration, False)
         comp_elem.reArrange()
     	#while (comp_elem.reArrange()): pass
-    	print
-    	print 'start refine top'
+    	print()
+    	print('start refine top')
     	while (True):
            success = refineTop(comp_elem,stmt_tab,index_tab, volatile_tab, iteration, range_tab)
            if not success: break
-    	   print 'end refine top'
-    	   print
+    	   print('end refine top')
+    	   print()
 
     	total_cost = __countCostForCompElem(comp_elem, stmt_tab, index_tab, volatile_tab, iteration,False)
     
@@ -451,15 +452,15 @@ def __unwrapTermsMultiplication(e, leading_arr_names, stmt_tab, range_tab):
 #---------------------------------------------------------------------
 
 def __createArrayDecl(arr, range_tab):
-    upper_ranges = map(lambda x: range_tab[x], arr.upper_inds)
-    lower_ranges = map(lambda x: range_tab[x], arr.lower_inds)
+    upper_ranges = [range_tab[x] for x in arr.upper_inds]
+    lower_ranges = [range_tab[x] for x in arr.lower_inds]
     inds = arr.upper_inds + arr.lower_inds
     #print inds, arr.name
     #print arr.sym_groups
     #print arr.vsym_groups
     #print
-    sym_groups = [map(lambda x: inds.index(x), g) for g in arr.sym_groups]
-    vsym_groups = [map(lambda x: inds.index(x), g) for g in arr.vsym_groups]
+    sym_groups = [[inds.index(x) for x in g] for g in arr.sym_groups]
+    vsym_groups = [[inds.index(x) for x in g] for g in arr.vsym_groups]
     for g in sym_groups:
         g.sort()
     sym_groups.sort()
@@ -551,7 +552,7 @@ def __cseAPS(terms, index_tab, volatile_tab, iteration, interval, soft_limit, ha
         return acc
 
     if (show_message):
-        print '... optimize %s-th term (out of %s)' % (len(acc[0][0])+1, len(acc[0][0])+len(terms))
+        print('... optimize %s-th term (out of %s)' % (len(acc[0][0])+1, len(acc[0][0])+len(terms)))
 
     (cur_i_arrs, cur_infos, cur_stmt_tab, cur_cost) = acc[0]
 
@@ -561,7 +562,7 @@ def __cseAPS(terms, index_tab, volatile_tab, iteration, interval, soft_limit, ha
         acc = acc[:hard_limit]
         l2 = len(acc)
         if (show_message):
-            print '--> exceed hard limit, cut search space (from %s to %s)' % (l1, l2)
+            print('--> exceed hard limit, cut search space (from %s to %s)' % (l1, l2))
 
     if (len(cur_i_arrs) > 0 and (len(cur_i_arrs) % interval == 0)):
         acc.sort(lambda x,y: cmp(x[3], y[3]))
@@ -569,7 +570,7 @@ def __cseAPS(terms, index_tab, volatile_tab, iteration, interval, soft_limit, ha
         acc = acc[:soft_limit]
         l2 = len(acc)
         if (show_message):
-            print '--> periodic search-space reduction, cut search space (from %s to %s)' % (l1, l2)
+            print('--> periodic search-space reduction, cut search space (from %s to %s)' % (l1, l2))
 
     term = terms[0]
     next_acc = []
@@ -620,8 +621,8 @@ def __factorize(adds, usage_tab, index_tab, volatile_tab, iteration):
 def __divideAndConquerFactorization(multi_term, usage_tab, index_tab, volatile_tab, iteration):
 
     # collect terms
-    non_terms = filter(lambda x: not isinstance(x, Term), multi_term)
-    terms = filter(lambda x: isinstance(x, Term), multi_term)
+    non_terms = [x for x in multi_term if not isinstance(x, Term)]
+    terms = [x for x in multi_term if isinstance(x, Term)]
 
     # sort terms from heaviest to lightest
     terms.sort(lambda x,y: -cmp(x.weight, y.weight))
@@ -647,7 +648,7 @@ def __divideAndConquerFactorization(multi_term, usage_tab, index_tab, volatile_t
         n_mterm_chunks = []
         for (i, mt) in enumerate(mterm_chunks):
 
-            print '*** factorize %s-th multi-term chunk (out of %s)' % (i+1, len(mterm_chunks))            
+            print('*** factorize %s-th multi-term chunk (out of %s)' % (i+1, len(mterm_chunks)))            
             
             cur_results = __factorizeMultiTerm(mt, fact_usage_tab, index_tab, volatile_tab, iteration, True,0)
             (fact_multi_term, fact_usage_tab) = cur_results[0]
@@ -696,7 +697,7 @@ def __factorizeMultiTerm(multi_term, usage_tab, index_tab, volatile_tab, iterati
         i += 1
 
         if (show_message):
-            print '... %s-th two-term factorization performed' % (i)
+            print('... %s-th two-term factorization performed' % (i))
 
         n_iter_results = []
         for (cur_multi_term, cur_usage_tab) in iter_results:
@@ -723,16 +724,15 @@ def __factorizeMultiTerm(multi_term, usage_tab, index_tab, volatile_tab, iterati
         # cut search space
         if (len(iter_results) > __FACT_LIMIT):
             if (__FACT_LIMIT > 1):
-                result_costs = map(lambda x: __countCostForMultiTerm(x[0], x[1], index_tab, volatile_tab, iteration),
-                                   iter_results)
-                compound = zip(iter_results, result_costs)
+                result_costs = [__countCostForMultiTerm(x[0], x[1], index_tab, volatile_tab, iteration) for x in iter_results]
+                compound = list(zip(iter_results, result_costs))
                 compound.sort(lambda x,y: cmp(x[1], y[1]))
-                iter_results = map(lambda x: x[0], compound)
+                iter_results = [x[0] for x in compound]
 
             l1 = len(iter_results)
             iter_results = iter_results[:__FACT_LIMIT]
             l2 = len(iter_results)
-            print '--> cut search space (from %s to %s)' % (l1, l2)
+            print('--> cut search space (from %s to %s)' % (l1, l2))
         
     # return best results
     return best_results
@@ -767,7 +767,7 @@ def __oneStepFactorizeMultiTerm(multi_term, usage_tab, index_tab, volatile_tab, 
     # find the best two-term factorization
     for cur_comb in getTwoCombinations(len(terms)):
         #print 'cur_comb',cur_comb
-        (term1, term2) = map(lambda x: terms[x], cur_comb)
+        (term1, term2) = [terms[x] for x in cur_comb]
         (cur_results, cur_profit) = factorizeTwoTerms(term1, term2, usage_tab, index_tab, volatile_tab, iteration,level+1)
 
         if (cur_results != None):
@@ -923,7 +923,7 @@ def factorizeTwoTerms(term1, term2, usage_tab, index_tab, volatile_tab, iteratio
                 (multi_term, cur_usage_tab) = cur_results[0]
 
                 # update usage table (statement table)
-                if (def_map.has_key(factor.name)):
+                if (factor.name in def_map):
                     infos = def_map[factor.name]
                     cur_usage_tab.insertInfos(infos)
                 
@@ -942,7 +942,7 @@ def factorizeTwoTerms(term1, term2, usage_tab, index_tab, volatile_tab, iteratio
                     
                     # update usage table (statement table)
                     for a in cur_arr_set:
-                        if (cur_def_map.has_key(a)):
+                        if (a in cur_def_map):
                             infos = cur_def_map[a]
                             cur_usage_tab.insertInfos(infos)
 
@@ -1075,13 +1075,13 @@ def __prepareForRecursion(multi_term, def_map, usage_tab, index_tab, volatile_ta
 
     # update usage table (statement table)
     for a in arr_set:
-        if (def_map.has_key(a)):
+        if (a in def_map):
             infos = def_map[a]
             usage_tab.insertInfos(infos)
 
     # update volatile table
     for a in arr_set:
-        if (def_map.has_key(a)):
+        if (a in def_map):
             info = def_map[a][0]
             if (info.is_volatile):
                 volatile_tab[a] = None
@@ -1097,7 +1097,7 @@ def __prepareForRecursion(multi_term, def_map, usage_tab, index_tab, volatile_ta
     multi_term = n_multi_term
     
     # collect terms
-    terms = filter(lambda x: isinstance(x, Term), multi_term)
+    terms = [x for x in multi_term if isinstance(x, Term)]
 
     if (__USE_CSE):
 
@@ -1207,7 +1207,7 @@ def __getArraySymbol(arr, sum_inds):
     from_inds = []
     to_inds = []
     for g in r_arr.sym_groups:
-        original_inds = filter(lambda x: x in g, inds)
+        original_inds = [x for x in inds if x in g]
         exts = []
         sums = []
         for i in original_inds:

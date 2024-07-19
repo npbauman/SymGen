@@ -28,14 +28,14 @@ def replicateSymArray(arrN, dims, sym_group):
         #print x, nx, nx2, y
         sign = 1
         for g in sym_group:
-            group = map(lambda z: nx[z], g)
-            group2 = map(lambda z: nx2[z], g)
+            group = [nx[z] for z in g]
+            group2 = [nx2[z] for z in g]
             sign *= countParitySign(group,group2)
 
         arr[x] = sign * arr[y]
 
         for g in sym_group:
-            group = map(lambda z: nx2[z], g)
+            group = [nx2[z] for z in g]
             if hasRepeat(group):
                 arr[x]=0
     return oneDim2nDim(arr,dims)[0]
@@ -52,14 +52,14 @@ def makeSymArray(dims, sym_group, is_random=False, init_val = 0):
         #print x, nx, nx2, y
         sign = 1
         for g in sym_group:
-            group = map(lambda z: nx[z], g)
-            group2 = map(lambda z: nx2[z], g)
+            group = [nx[z] for z in g]
+            group2 = [nx2[z] for z in g]
             sign *= countParitySign(group,group2)
 
         arr[x] = sign * arr[y]
 
         for g in sym_group:
-            group = map(lambda z: nx2[z], g)
+            group = [nx2[z] for z in g]
             if hasRepeat(group):
                 arr[x]=0
 
@@ -76,7 +76,7 @@ def sortnIdx(nidx,sym_group):
     #print nidx, sym_group
     nidx2 = nidx[:]
     for g in sym_group:
-        group = map(lambda x: nidx[x], g)
+        group = [nidx[x] for x in g]
         group.sort(reverse=True) # descending
         for x in range(0,len(g)):
             nidx2[g[x]]=group[x]

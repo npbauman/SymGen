@@ -1,5 +1,6 @@
-from error import FrontEndError
-from absyn import Identifier, Parenth, NumConst, Array, Addition, Multiplication
+from .error import FrontEndError
+from .absyn import Identifier, Parenth, NumConst, Array, Addition, Multiplication
+from functools import reduce
 
 
 def getIndices(e):
@@ -12,13 +13,13 @@ def getIndices(e):
     elif (isinstance(e, Addition)):
         return getIndices(e.subexps[0])
     elif (isinstance(e, Multiplication)):
-        inames = reduce(lambda x,y: x+y, [map(lambda x: x.name, getIndices(se)) for se in e.subexps], [])
+        inames = reduce(lambda x,y: x+y, [[x.name for x in getIndices(se)] for se in e.subexps], [])
         #print inames
         external_inames = []
         for i in inames:
             if (inames.count(i) == 1):
                 external_inames.append(i)
-        print external_inames
+        print(external_inames)
         return [Identifier(i) for i in external_inames]
     else:
         raise FrontEndError('%s: unknown expression' % __name__)
@@ -26,7 +27,7 @@ def getIndices(e):
 
 def getSumIndices(e):
     if (isinstance(e, Multiplication)):
-        inames = reduce(lambda x,y: x+y, [map(lambda x: x.name, getIndices(se)) for se in e.subexps], [])
+        inames = reduce(lambda x,y: x+y, [[x.name for x in getIndices(se)] for se in e.subexps], [])
         sum_inames = []
         for i in inames:
             if (inames.count(i) > 1 and i not in sum_inames):

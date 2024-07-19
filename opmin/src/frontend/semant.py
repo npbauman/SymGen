@@ -1,8 +1,9 @@
-from error import InputError, FrontEndError
-from absyn import Decl, RangeDecl, IndexDecl, ArrayDecl, ExpandDecl, VolatileDecl, IterationDecl, \
+from .error import InputError, FrontEndError
+from .absyn import Decl, RangeDecl, IndexDecl, ArrayDecl, ExpandDecl, VolatileDecl, IterationDecl, \
      Stmt, AssignStmt, Parenth, NumConst, Array, Addition, Multiplication
-from absyn_lib import getIndices
+from .absyn_lib import getIndices
 import ast.absyn
+from functools import reduce
 
 
 def semantCheck(trans_unit):
@@ -63,14 +64,14 @@ def __checkArrayDecl(d, symtab):
 
 
 def __checkExpandDecl(d, symtab):
-    if (symtab.expand_tab.has_key(d.arr.name)):
+    if (d.arr.name in symtab.expand_tab):
         raise InputError('"%s" already exists in expansion list' % d.arr.name, __getLineNo(d.arr))
     __verifyArrayRefName(d.arr.name, __getLineNo(d.arr), symtab)
     symtab.expand_tab[d.arr.name] = d.arr.name
 
 
 def __checkVolatileDecl(d, symtab):
-    if (symtab.volatile_tab.has_key(d.arr.name)):
+    if (d.arr.name in symtab.volatile_tab):
         raise InputError('"%s" already exists in volatile list' % d.arr.name, __getLineNo(d.arr))
     __verifyArrayRefName(d.arr.name, __getLineNo(d.arr), symtab)
     symtab.volatile_tab[d.arr.name] = d.arr.name
@@ -100,7 +101,7 @@ def __checkAssignStmt(s, symtab):
         raise InputError('LHS array cannot be negative', __getLineNo(s.lhs))
     #print str(set(map(lambda x: x.name, getIndices(s.lhs)))) + "=" + str(set(map(lambda x: x.name, getIndices(s.rhs))))
     
-    if (set(map(lambda x: x.name, getIndices(s.lhs))) != set(map(lambda x: x.name, getIndices(s.rhs)))):
+    if (set([x.name for x in getIndices(s.lhs)]) != set([x.name for x in getIndices(s.rhs)])):
         raise InputError('LHS and RHS of assignment must have equal index sets', __getLineNo(s))
 
     lhs_aref = list(__collectArrayRefs(s.lhs))[0]
@@ -140,8 +141,8 @@ def __checkNumConst(e, symtab):
 
 def __checkArray(e, symtab):
     __verifyArrayRef(e.name, __getLineNo(e), e.inds, symtab)
-    inames = map(lambda x: x.name, getIndices(e))
-    rnames = map(lambda x: symtab.index_tab[x], inames)
+    inames = [x.name for x in getIndices(e)]
+    rnames = [symtab.index_tab[x] for x in inames]
     (up_range_names, lo_range_names) = symtab.array_tab[e.name]
     istruct = up_range_names + lo_range_names
     if (istruct != rnames):
@@ -160,9 +161,9 @@ def __checkArray(e, symtab):
 def __checkAddition(e, symtab):
     for se in e.subexps:
         __checkExp(se, symtab)
-    add_iname_set = set(map(lambda x: x.name, getIndices(e)))
+    add_iname_set = set([x.name for x in getIndices(e)])
     for se in e.subexps:
-        op_iname_set = set(map(lambda x: x.name, getIndices(se)))
+        op_iname_set = set([x.name for x in getIndices(se)])
         if (add_iname_set != op_iname_set):
             raise InputError('subexpressions of an addition must have equal index sets', __getLineNo(e))
 
@@ -170,28 +171,28 @@ def __checkAddition(e, symtab):
 def __checkMultiplication(e, symtab):
     for se in e.subexps:
         __checkExp(se, symtab)
-    inames = reduce(lambda x, y: x + y, [map(lambda x: x.name, getIndices(se)) for se in e.subexps], [])
+    inames = reduce(lambda x, y: x + y, [[x.name for x in getIndices(se)] for se in e.subexps], [])
     for i in inames:
         if (inames.count(i) > 2):
             raise InputError('summation index "%s" must occur exactly twice in a multiplication' % i, __getLineNo(e))
 
 
 def __verifyVarDecl(name, line_no, symtab):
-    if (symtab.range_tab.has_key(name) or symtab.index_tab.has_key(name) or symtab.array_tab.has_key(name)):
+    if (name in symtab.range_tab or name in symtab.index_tab or name in symtab.array_tab):
         raise InputError('"%s" is already defined' % name, line_no)
 
 
 def __verifyRangeRef(name, line_no, symtab):
-    if (not symtab.range_tab.has_key(name)):
-        if (symtab.index_tab.has_key(name) or symtab.array_tab.has_key(name)):
+    if (name not in symtab.range_tab):
+        if (name in symtab.index_tab or name in symtab.array_tab):
             raise InputError('"%s" is not a range' % name, line_no)
         else:
             raise InputError('range "%s" is undefined' % name, line_no)
 
 
 def __verifyIndexRef(name, line_no, symtab):
-    if (not symtab.index_tab.has_key(name)):
-        if (symtab.range_tab.has_key(name) or symtab.array_tab.has_key(name)):
+    if (name not in symtab.index_tab):
+        if (name in symtab.range_tab or name in symtab.array_tab):
             raise InputError('"%s" is not an index' % name, line_no)
         else:
             raise InputError('index "%s" is undefined' % name, line_no)
@@ -204,8 +205,8 @@ def __verifyArrayRef(name, line_no, inds, symtab):
 
 
 def __verifyArrayRefName(name, line_no, symtab):
-    if (not symtab.array_tab.has_key(name)):
-        if (symtab.range_tab.has_key(name) or symtab.index_tab.has_key(name)):
+    if (name not in symtab.array_tab):
+        if (name in symtab.range_tab or name in symtab.index_tab):
             raise InputError('"%s" is not an array' % name, line_no)
         else:
             raise InputError('array "%s" is undefined' % name, line_no)
@@ -220,10 +221,10 @@ def __verifySymGroups(arr_decl, symtab):
                 raise InputError('"%s" is not a valid index position' % ipos.value, __getLineNo(ipos))
             if (ipos.value >= len(ranges)):
                 raise InputError('index "%s" is out of range' % int(ipos.value), __getLineNo(ipos))
-            all_indexes = map(lambda x: x.value, reduce(lambda x, y: x+y, arr_decl.sym_groups, []))
+            all_indexes = [x.value for x in reduce(lambda x, y: x+y, arr_decl.sym_groups, [])]
             if (all_indexes.count(ipos.value) > 1):
                 raise InputError('index "%s" cannot occur more than once' % int(ipos.value), __getLineNo(ipos))
-        sgroups_ranges = map(lambda x: ranges[int(x.value)].name, g)
+        sgroups_ranges = [ranges[int(x.value)].name for x in g]
         for r in sgroups_ranges:
             pass
 
@@ -290,8 +291,8 @@ def __symCheckExp(e, global_sym_groups):
 
 
 def __symCheckArray(e, global_sym_groups):
-    global_sets = map(set, global_sym_groups)
-    this_sets = map(set, e.sym_groups)
+    global_sets = list(map(set, global_sym_groups))
+    this_sets = list(map(set, e.sym_groups))
     for s1 in global_sets:
         found = False
         for s2 in this_sets:
@@ -308,8 +309,8 @@ def __symCheckAddition(e, global_sym_groups):
 
 
 def __symCheckMultiplication(e, global_sym_groups):
-    global_sets = map(set, global_sym_groups)
-    this_sets = map(set, e.sym_groups)
+    global_sets = list(map(set, global_sym_groups))
+    this_sets = list(map(set, e.sym_groups))
     for s1 in global_sets:
         for s2 in this_sets:
             if (not ((s1 >= s2) or len(s1 & s2) == 0)):

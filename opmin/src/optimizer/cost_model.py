@@ -1,4 +1,4 @@
-from error import OptimizerError
+from .error import OptimizerError
 from ast.absyn import Array, Addition, Multiplication
 
 
@@ -18,7 +18,7 @@ def __countOpCostExp(e, index_tab, volatile_tab, iteration):
 
 
 def __countOpCostArray(e, index_tab, volatile_tab, iteration):
-    is_volatile = volatile_tab.has_key(e.name)
+    is_volatile = e.name in volatile_tab
     if (e.coef == 1.0 or e.coef == -1.0 or e.coef == 1 or e.coef == -1):
         return (0.0, is_volatile)
     else:
@@ -131,7 +131,7 @@ def __factorial(n):
     if n == 1:
         return 1.0
 
-    if (__storage_table.has_key(n)):
+    if (n in __storage_table):
         return __storage_table[n]
 
     t = 1.0

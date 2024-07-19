@@ -1,4 +1,4 @@
-from error import OptimizerError
+from .error import OptimizerError
 from ast.absyn import Array, Addition, Multiplication
 from ast.absyn_lib import buildRenamingTable
 
@@ -25,18 +25,18 @@ def __canonicalizeArray(e):
 
     # get all possible index swaps
     coef_inds_info = [(arr_coef, arr_upper_inds, arr_lower_inds)]
-    swap_groups = filter(lambda x: len(x) > 1, arr_sym_groups)
+    swap_groups = [x for x in arr_sym_groups if len(x) > 1]
     for g in swap_groups:
         # permuts = __getAllPermutations(g)
         permuts = __getSortPermutationRepresent(g)
-        signs = map(lambda x: __countParitySign(g, x), permuts)
-        ren_tabs = map(lambda x: buildRenamingTable(g, x), permuts)
+        signs = [__countParitySign(g, x) for x in permuts]
+        ren_tabs = [buildRenamingTable(g, x) for x in permuts]
         new_coef_inds_info = []
         for (a_c, a_uis, a_lis) in coef_inds_info:
             for (s, r, p) in zip(signs, ren_tabs, permuts):
                 n_a_c = a_c * s
-                n_a_uis = map(lambda x: r.get(x, x), a_uis)
-                n_a_lis = map(lambda x: r.get(x, x), a_lis)
+                n_a_uis = [r.get(x, x) for x in a_uis]
+                n_a_lis = [r.get(x, x) for x in a_lis]
                 new_coef_inds_info.append((n_a_c, n_a_uis, n_a_lis))
         coef_inds_info = new_coef_inds_info
 
@@ -61,13 +61,13 @@ def __canonicalizeArray(e):
             num += 1
         ren_tab = buildRenamingTable(from_inds, to_inds)
 
-        a_uis = map(lambda x: ren_tab.get(x, x), a_uis)
-        a_lis = map(lambda x: ren_tab.get(x, x), a_lis)
+        a_uis = [ren_tab.get(x, x) for x in a_uis]
+        a_lis = [ren_tab.get(x, x) for x in a_lis]
 
         s = ''
         s += str(a_c) + ' * ' + a_name + str(a_uis) + str(a_lis)
 
-        if (not can_forms_tab.has_key(s)):
+        if (s not in can_forms_tab):
             can_forms_tab[s] = None
             can_forms_info.append((s, ext_uis + ext_lis))
 
@@ -94,12 +94,12 @@ def __canonicalizeAddition(e):
     # get all possible index swaps
     swap_groups = []
     for i in range(0, len(e.subexps)):
-        swap_groups.extend(map(lambda x: (i, x), filter(lambda x: len(x) > 1, add_sym_groups)))
+        swap_groups.extend([(i, x) for x in [x for x in add_sym_groups if len(x) > 1]])
     for (t, g) in swap_groups:
         # permuts = __getAllPermutations(g)
         permuts = __getSortPermutationRepresent(g)
-        signs = map(lambda x: __countParitySign(g, x), permuts)
-        ren_tabs = map(lambda x: buildRenamingTable(g, x), permuts)
+        signs = [__countParitySign(g, x) for x in permuts]
+        ren_tabs = [buildRenamingTable(g, x) for x in permuts]
         new_subexps_infos = []
         for ses_info in subexps_infos:
             for (s, r) in zip(signs, ren_tabs):
@@ -108,8 +108,8 @@ def __canonicalizeAddition(e):
                     if (t == i):
                         n_a_c = a_c * s
                         n_a_n = a_n
-                        n_a_uis = map(lambda x: r.get(x, x), a_uis)
-                        n_a_lis = map(lambda x: r.get(x, x), a_lis)
+                        n_a_uis = [r.get(x, x) for x in a_uis]
+                        n_a_lis = [r.get(x, x) for x in a_lis]
                     else:
                         n_a_c = a_c
                         n_a_n = a_n
@@ -149,11 +149,11 @@ def __canonicalizeAddition(e):
         for (i, (a_c, a_n, a_uis, a_lis)) in enumerate(ses_info):
             if (i > 0):
                 s += ' + '
-            a_uis = map(lambda x: ren_tab.get(x, x), a_uis)
-            a_lis = map(lambda x: ren_tab.get(x, x), a_lis)
+            a_uis = [ren_tab.get(x, x) for x in a_uis]
+            a_lis = [ren_tab.get(x, x) for x in a_lis]
             s += str(a_c) + ' * ' + a_n + str(a_uis) + str(a_lis)
 
-        if (not can_forms_tab.has_key(s)):
+        if (s not in can_forms_tab):
             can_forms_tab[s] = None
             can_forms_info.append((s, ext_uis + ext_lis))
 
@@ -190,38 +190,38 @@ def __canonicalizeMultiplication(e):
     MULT = 3
     coef_inds_info = [(mult_coef, arr1_upper_inds, arr1_lower_inds, arr2_upper_inds, arr2_lower_inds)]
 
-    swap_groups = map(lambda x: (ARR1, x), filter(lambda x: len(x) > 1, arr1_sym_groups))
-    swap_groups += map(lambda x: (ARR2, x), filter(lambda x: len(x) > 1, arr2_sym_groups))
-    swap_groups += map(lambda x: (MULT, x), filter(lambda x: len(x) > 1, mult_sym_groups))
+    swap_groups = [(ARR1, x) for x in [x for x in arr1_sym_groups if len(x) > 1]]
+    swap_groups += [(ARR2, x) for x in [x for x in arr2_sym_groups if len(x) > 1]]
+    swap_groups += [(MULT, x) for x in [x for x in mult_sym_groups if len(x) > 1]]
 
     for (t, g) in swap_groups:  # t = type   g = group
         # permuts = __getAllPermutations(g) #<-- original by Albert
         permuts = __getSortPermutationRepresent(g)
 
-        signs = map(lambda x: __countParitySign(g, x), permuts)
-        ren_tabs = map(lambda x: buildRenamingTable(g, x), permuts)
+        signs = [__countParitySign(g, x) for x in permuts]
+        ren_tabs = [buildRenamingTable(g, x) for x in permuts]
         new_coef_inds_info = []
         for (m_c, a1_uis, a1_lis, a2_uis, a2_lis) in coef_inds_info:
             for (s, r, p) in zip(signs, ren_tabs, permuts):
                 if (t == ARR1):
                     n_m_c = m_c * s
-                    n_a1_uis = map(lambda x: r.get(x, x), a1_uis)
-                    n_a1_lis = map(lambda x: r.get(x, x), a1_lis)
+                    n_a1_uis = [r.get(x, x) for x in a1_uis]
+                    n_a1_lis = [r.get(x, x) for x in a1_lis]
                     n_a2_uis = a2_uis[:]
                     n_a2_lis = a2_lis[:]
                 elif (t == ARR2):
                     n_m_c = m_c * s
                     n_a1_uis = a1_uis[:]
                     n_a1_lis = a1_lis[:]
-                    n_a2_uis = map(lambda x: r.get(x, x), a2_uis)
-                    n_a2_lis = map(lambda x: r.get(x, x), a2_lis)
+                    n_a2_uis = [r.get(x, x) for x in a2_uis]
+                    n_a2_lis = [r.get(x, x) for x in a2_lis]
                 else:
                     assert(t == MULT), '%s: unknown type' % __name__
                     n_m_c = m_c * s
-                    n_a1_uis = map(lambda x: r.get(x, x), a1_uis)
-                    n_a1_lis = map(lambda x: r.get(x, x), a1_lis)
-                    n_a2_uis = map(lambda x: r.get(x, x), a2_uis)
-                    n_a2_lis = map(lambda x: r.get(x, x), a2_lis)
+                    n_a1_uis = [r.get(x, x) for x in a1_uis]
+                    n_a1_lis = [r.get(x, x) for x in a1_lis]
+                    n_a2_uis = [r.get(x, x) for x in a2_uis]
+                    n_a2_lis = [r.get(x, x) for x in a2_lis]
                 new_coef_inds_info.append((n_m_c, n_a1_uis, n_a1_lis, n_a2_uis, n_a2_lis))
         coef_inds_info = new_coef_inds_info
 
@@ -238,8 +238,8 @@ def __canonicalizeMultiplication(e):
             iter_info.append((m_c, arr2_name, a2_uis[:], a2_lis[:], arr1_name, a1_uis[:], a1_lis[:]))   # t2 * t1
 
     for (m_c, a1_name, a1_uis, a1_lis, a2_name, a2_uis, a2_lis) in iter_info:
-        ext_uis = filter(lambda x: x not in mult_sum_inds, a1_uis + a2_uis)     # a1_uis + a2_uis - mult_sum_inds
-        ext_lis = filter(lambda x: x not in mult_sum_inds, a1_lis + a2_lis)
+        ext_uis = [x for x in a1_uis + a2_uis if x not in mult_sum_inds]     # a1_uis + a2_uis - mult_sum_inds
+        ext_lis = [x for x in a1_lis + a2_lis if x not in mult_sum_inds]
 
         from_inds = []
         to_inds = []
@@ -260,12 +260,12 @@ def __canonicalizeMultiplication(e):
 
         ren_tab = buildRenamingTable(from_inds, to_inds)
 
-        a1_uis = map(lambda x: ren_tab.get(x, x), a1_uis)
-        a1_lis = map(lambda x: ren_tab.get(x, x), a1_lis)
-        a2_uis = map(lambda x: ren_tab.get(x, x), a2_uis)
-        a2_lis = map(lambda x: ren_tab.get(x, x), a2_lis)
+        a1_uis = [ren_tab.get(x, x) for x in a1_uis]
+        a1_lis = [ren_tab.get(x, x) for x in a1_lis]
+        a2_uis = [ren_tab.get(x, x) for x in a2_uis]
+        a2_lis = [ren_tab.get(x, x) for x in a2_lis]
 
-        sym_groups = [map(lambda x: ren_tab.get(x, x), g) for g in mult_sym_groups]
+        sym_groups = [[ren_tab.get(x, x) for x in g] for g in mult_sym_groups]
         for g in sym_groups:
             g.sort()
         sym_groups.sort()
@@ -275,7 +275,7 @@ def __canonicalizeMultiplication(e):
         s += a1_name + str(a1_uis) + str(a1_lis) + ' * '
         s += a2_name + str(a2_uis) + str(a2_lis)
 
-        if (not can_forms_tab.has_key(s)):
+        if (s not in can_forms_tab):
             can_forms_tab[s] = None
             can_forms_info.append((s, ext_uis + ext_lis))
 

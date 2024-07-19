@@ -665,10 +665,10 @@ def run():
 
  #---------- Results Comparison ---------- 
 
- print r_vo_original
- print r_vo_optimum
+ print(r_vo_original)
+ print(r_vo_optimum)
  if (r_vo_original != r_vo_optimum): 
   return False 
  return True 
 
-print run()
+print(run())

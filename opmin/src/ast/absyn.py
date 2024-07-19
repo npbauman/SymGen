@@ -1,3 +1,4 @@
+from functools import reduce
 # Absyn
 #  |
 #  +-- TranslationUnit
@@ -52,7 +53,7 @@ class TranslationUnit(Absyn):
         return TranslationUnit(r_comp_elems)
 
     def __repr__(self):
-        return '\n'.join(map(lambda x: '\n' + str(x), self.comp_elems))
+        return '\n'.join(['\n' + str(x) for x in self.comp_elems])
 
 
 class CompoundElem(Absyn):
@@ -303,7 +304,7 @@ class CompoundElem(Absyn):
 
     def __repr__(self):
         s = '{'
-        s += ''.join(map(lambda x: '\n  ' + str(x), self.elems))
+        s += ''.join(['\n  ' + str(x) for x in self.elems])
         if (len(self.elems) > 0):
             s += '\n'
         s += '}'
@@ -377,10 +378,10 @@ class ArrayDecl(Decl):
         s += ','.join(map(str, self.lower_ranges))
         s += ']:'
         for g in self.sym_groups:
-            s += '(' + ','.join(map(lambda x: str(x), g)) + ')'
+            s += '(' + ','.join([str(x) for x in g]) + ')'
         s += ':'
         for g in self.vsym_groups:
-            s += '<' + ','.join(map(lambda x: str(x), g)) + '>'
+            s += '<' + ','.join([str(x) for x in g]) + '>'
         s += ');'
         return s
 
@@ -558,7 +559,7 @@ class Addition(Exp):
         s += '}'
 
         s += ','
-        s += ''.join(map(lambda x: '\n' + indent + x.strRepr(indent + '  '), self.subexps))
+        s += ''.join(['\n' + indent + x.strRepr(indent + '  ') for x in self.subexps])
         s += ')'
         return s
 
@@ -678,7 +679,7 @@ class Multiplication(Exp):
         s += '}\n' + indent + 'ops: '
         s += '[' + ','.join(map(str, self.ops)) + ']\n'
         s += indent + 'subexps:'
-        s += ''.join(map(lambda x: '\n' + indent + indent + x.strRepr(indent + '  '), self.subexps))
+        s += ''.join(['\n' + indent + indent + x.strRepr(indent + '  ') for x in self.subexps])
         s += ')'
         return s
 
@@ -705,9 +706,9 @@ class Multiplication(Exp):
         return coef
 
     def __computeIndicesAndSymmetry(self, subexps):
-        [inds_list, up_inds_list, lo_inds_list, sym_groups_list] = zip(
+        [inds_list, up_inds_list, lo_inds_list, sym_groups_list] = list(zip(
             *[(se.upper_inds + se.lower_inds, se.upper_inds, se.lower_inds, se.sym_groups) for se in subexps]
-        )
+        ))
         inds = reduce(lambda x, y: x + y, inds_list, [])
         sum_inds = []
         for i in inds:
@@ -716,16 +717,16 @@ class Multiplication(Exp):
 
         up_inds = reduce(lambda x, y: x + y, up_inds_list, [])
         lo_inds = reduce(lambda x, y: x + y, lo_inds_list, [])
-        up_ext_inds = filter(lambda x: x not in sum_inds, up_inds)
-        lo_ext_inds = filter(lambda x: x not in sum_inds, lo_inds)
+        up_ext_inds = [x for x in up_inds if x not in sum_inds]
+        lo_ext_inds = [x for x in lo_inds if x not in sum_inds]
 
         ext_sym_groups = []
         sum_sym_groups = []
 
         for sg in sym_groups_list:
             for g in sg:
-                ext_g = filter(lambda x: x not in sum_inds, g)
-                sum_g = filter(lambda x: x in sum_inds, g)
+                ext_g = [x for x in g if x not in sum_inds]
+                sum_g = [x for x in g if x in sum_inds]
                 if (len(ext_g) > 0):
                     ext_sym_groups.append(ext_g)
                 if (len(sum_g) > 0):
@@ -754,7 +755,7 @@ class Multiplication(Exp):
                     cur_s = cur_s - common_s
             sym_groups_sets = next_sym_groups_sets
 
-        sum_sym_groups = map(lambda x: list(x), sum_sym_groups)
+        sum_sym_groups = [list(x) for x in sum_sym_groups]
 
         return (up_ext_inds, lo_ext_inds, sum_inds, ext_sym_groups, sum_sym_groups)
 
@@ -764,7 +765,7 @@ class Multiplication(Exp):
         new_vsym_groups = [[], []]
         inds1 = tensor1.upper_inds + tensor1.lower_inds
         inds2 = tensor2.upper_inds + tensor2.lower_inds
-        sum_inds = filter(lambda x: x in inds2, inds1)
+        sum_inds = [x for x in inds1 if x in inds2]
         bothV = False
         if not (tensor1.vsym_groups == [] or tensor2.vsym_groups == []):
             bothV = True
@@ -811,7 +812,7 @@ class Multiplication(Exp):
         for g in global_sym_groups:
             gs = []
             for i in g:
-                if (tab.has_key(i)):
+                if (i in tab):
                     cur_g = tab[i]
                     if (cur_g not in gs):
                         gs.append(cur_g[:])
@@ -824,7 +825,7 @@ class Multiplication(Exp):
             g = reduce(lambda x, y: x + y, o.sym_groups, [])
             new_sym_groups.append(g)
             seen_inds.extend(g)
-        for (i, g) in tab.iteritems():
+        for (i, g) in tab.items():
             if (i not in seen_inds):
                 new_sym_groups.append(g[:])
                 seen_inds.extend(g)
