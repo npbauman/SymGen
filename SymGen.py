@@ -5,6 +5,7 @@ import jsbeautifier
 import time
 import math
 import sys
+import copy
 import networkx as nx
 # from fractions import Fraction
 from Operators import *
@@ -271,7 +272,7 @@ for op_set in final_allowed_set:
         permutation_list = [element for pair in contraction_list for element in pair]
 
         # Determine Sign based on parity and whether there is a negative sign in the operator expression.
-        ContractionDict[count]['Sign'] = parity_and_sign(permutation_list,op_set)
+        ContractionDict[count]['Parity'], ContractionDict[count]['Sign'] = parity_and_sign(permutation_list,op_set)
 
         del permutation_list
     
@@ -308,8 +309,10 @@ for op_set in final_allowed_set:
                             combined_weight += ContractionDict[i]['Weight']
                             ignore_list.append(i)
 
-            ShortDict[current] = ContractionDict[current]
-            ShortDict[current]['Weight'] = combined_weight
+            ShortDict[current] = copy.deepcopy(ContractionDict[current])
+            del ShortDict[current]['Weight']
+            del ShortDict[current]['Sign']
+            ShortDict[current]['S-Weight'] = combined_weight * ContractionDict[current]['Sign']
 
     toc = time.perf_counter()
     print(f"{final_allowed_set.index(op_set)+1}/{len(final_allowed_set)} Evaluating {op_set} = {toc - tic:0.4f} seconds")
@@ -330,36 +333,33 @@ FinalDict={}
 ignore_list = []
 for key_1, value_1 in ShortDict.items():
     if key_1 not in ignore_list:
-        if "-" in value_1['Term']:
-            combined_weight = -1.0 * value_1['Weight']
-        else:
-            combined_weight =  1.0 * value_1['Weight']
+        combined_weight =  1.0 * value_1['S-Weight']
 
         for key_2, value_2 in ShortDict.items():
             if key_2 > key_1 and key_2 not in ignore_list:
                 if(sorted(value_1['Operators']) == sorted(value_2['Operators'])):
                     if check_isomorphism(value_1['Graph'],value_2['Graph']):
-                        if "-" in value_2['Term']:
-                            combined_weight -= value_2['Weight']
+                        if value_1['Parity'] == value_2['Parity']:
+                            combined_weight += value_2['S-Weight']
                         else:
-                            combined_weight += value_2['Weight']
+                            combined_weight -= value_2['S-Weight']
 
                         ignore_list.append(key_2)
 
-        FinalDict[key_1] = ShortDict[key_1]
-        FinalDict[key_1]['Weight'] = round(combined_weight,9)
+        FinalDict[key_1] = copy.deepcopy(ShortDict[key_1])
+        FinalDict[key_1]['S-Weight'] = round(combined_weight,9)
 
 print("")
-count = sum(1 for value in FinalDict.values() if abs(value['Weight']) == 0.0 and not value['Connected'])
+count = sum(1 for value in FinalDict.values() if abs(value['S-Weight']) == 0.0 and not value['Connected'])
 print(count, "vanishing disconnected terms.")
-count = sum(1 for value in FinalDict.values() if abs(value['Weight']) != 0.0 and not value['Connected'])
+count = sum(1 for value in FinalDict.values() if abs(value['S-Weight']) != 0.0 and not value['Connected'])
 print(count, "nonvanishing disconnected terms.")
-count = sum(1 for value in FinalDict.values() if abs(value['Weight']) == 0.0 and value['Connected'])
+count = sum(1 for value in FinalDict.values() if abs(value['S-Weight']) == 0.0 and value['Connected'])
 print(count, "vanishing connected terms.")
-count = sum(1 for value in FinalDict.values() if abs(value['Weight']) != 0.0 and value['Connected'])
+count = sum(1 for value in FinalDict.values() if abs(value['S-Weight']) != 0.0 and value['Connected'])
 print(count, "nonvanishing connected terms.")
 for value in FinalDict.values():
-    if abs(value['Weight']) != 0.0 and value['Connected']: 
+    if abs(value['S-Weight']) != 0.0 and value['Connected']: 
         print(value)
 
 Final_Equations = []
@@ -367,9 +367,8 @@ for key, value in FinalDict.items():
     if print_opt == "verbose":
         print("\n", key, value)
 
-    weight = value.get("Weight")
-    sign = value.get("Sign")
-    eqn_str = process_weight(weight, sign)
+    sweight = value.get("S-Weight")
+    eqn_str = process_weight(sweight)
 
     if eqn_str:
         identities = value["Identities"]
@@ -399,6 +398,7 @@ for key, value in FinalDict.items():
                 labels = Op_CA_list[_]
                 key = tuple(label[0] for label in labels)
                 op_template = operator_mapping[Operator].get(key)
+                flipsign =  op_template[1]
                 if op_template:
                     op_str = op_template[0].format(*labels)
                     if _ != length-1:

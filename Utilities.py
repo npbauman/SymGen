@@ -61,7 +61,7 @@ def parity_and_sign(permutation_list, op_set):
     # print(permutation_list)
     # print("Sign =", sign, "Parity =", parity)
 
-    return sign
+    return parity, sign
 
 
 def expand_exponential(operator_list, commutator_order, flip_sign=False):

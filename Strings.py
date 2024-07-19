@@ -1,16 +1,26 @@
 from fractions import Fraction
 from Utilities import *
 
-def process_weight(weight, sign):
-    if abs(weight) != 0.0:
-        weight_frac = Fraction(weight).limit_denominator(1000).as_integer_ratio()
-        if sign == -1:
-            return f"-({weight_frac[0]}.0/{weight_frac[1]}.0) * " if weight_frac != (1, 1) else "-1.0 * "
-        elif sign == 1:
-            return f"({weight_frac[0]}.0/{weight_frac[1]}.0) * " if weight_frac != (1, 1) else "1.0 * "
+# def process_weight(weight, sign):
+#     if abs(weight) != 0.0:
+#         weight_frac = Fraction(weight).limit_denominator(1000).as_integer_ratio()
+#         if sign == -1:
+#             return f"-({weight_frac[0]}.0/{weight_frac[1]}.0) * " if weight_frac != (1, 1) else "-1.0 * "
+#         elif sign == 1:
+#             return f"({weight_frac[0]}.0/{weight_frac[1]}.0) * " if weight_frac != (1, 1) else "1.0 * "
+#         else:
+#             raise ValueError("Invalid sign")
+#     return None
+
+def process_weight(sweight):
+    if abs(sweight) != 0.0:
+        weight_frac = Fraction(sweight).limit_denominator(1000).as_integer_ratio()
+        if weight_frac == (1, 1):
+            return "1.0 * "
+        elif weight_frac == (-1, 1):
+            return "-1.0 * "
         else:
-            raise ValueError("Invalid sign")
-    return None
+            return f"({weight_frac[0]}.0/{weight_frac[1]}.0) * "
 
 def determine_positions(identities, operators, operators_dict):
     fixed_positions = []
@@ -162,6 +172,9 @@ operator_mapping = {
     },
     "T2BB": {
         ("p", "h", "p", "h"): ['(LTOp)t2("bbbb")({0}_b, {2}_b, {1}_b, {3}_b)', False]
+    },
+    "T2AA+": {
+        ("h", "p", "h", "p"): ['(LTOp)t2("aaaa")({1}_a, {3}_a, {0}_a, {2}_a)', False]
     },
     "T3AAA": {
         ("p", "h", "p", "h", "p", "h"): ['(LTOp)t3("aaaaaa")({0}_a, {2}_a, {4}_a, {1}_a, {3}_a, {5}_a)', False]
