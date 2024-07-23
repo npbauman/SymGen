@@ -1,5 +1,5 @@
 from .error import BackEndError
-from ast.absyn import Decl, RangeDecl, IndexDecl, ArrayDecl, ExpandDecl, VolatileDecl,\
+from op_ast.absyn import Decl, RangeDecl, IndexDecl, ArrayDecl, ExpandDecl, VolatileDecl,\
      IterationDecl, Stmt, AssignStmt, Array, Addition, Multiplication
 
 

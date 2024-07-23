@@ -1,10 +1,10 @@
 from . import single_term_opt
 from time import time
 from .error import OptimizerError
-from ast.absyn import ArrayDecl, VolatileDecl, IterationDecl, RangeDecl, IndexDecl, \
+from op_ast.absyn import ArrayDecl, VolatileDecl, IterationDecl, RangeDecl, IndexDecl, \
      AssignStmt, Array, Addition, Multiplication
 from .cost_model import countOpCost
-from ast.absyn_lib import renameIndices, buildRenamingTable, extendRenamingTable
+from op_ast.absyn_lib import renameIndices, buildRenamingTable, extendRenamingTable
 from .stmt_table import StmtTable, UsageTable
 from .combination import getTwoCombinations
 from .refine import updateCSE, updateFAC, refineTop
@@ -266,18 +266,18 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
         total_cost = __countCostForCompElem(comp_elem, stmt_tab, index_tab, volatile_tab, iteration, False)
         comp_elem.reArrange()
     	#while (comp_elem.reArrange()): pass
-    	print()
-    	print('start refine top')
-    	while (True):
-           success = refineTop(comp_elem,stmt_tab,index_tab, volatile_tab, iteration, range_tab)
-           if not success: break
-    	   print('end refine top')
-    	   print()
+        print()
+        print('start refine top')
+        while (True):
+            success = refineTop(comp_elem,stmt_tab,index_tab, volatile_tab, iteration, range_tab)
+            if not success: break
+        print('end refine top')
+        print()
 
-    	total_cost = __countCostForCompElem(comp_elem, stmt_tab, index_tab, volatile_tab, iteration,False)
+        total_cost = __countCostForCompElem(comp_elem, stmt_tab, index_tab, volatile_tab, iteration,False)
     
-    	updateCSE(comp_elem, stmt_tab)
-    	comp_elem.removeRedundant()
+        updateCSE(comp_elem, stmt_tab)
+        comp_elem.removeRedundant()
         comp_elem.reArrange()
         total_cost = __countCostForCompElem(comp_elem, stmt_tab, index_tab, volatile_tab, iteration,False)
     

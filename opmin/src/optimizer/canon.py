@@ -1,6 +1,6 @@
 from .error import OptimizerError
-from ast.absyn import Array, Addition, Multiplication
-from ast.absyn_lib import buildRenamingTable
+from op_ast.absyn import Array, Addition, Multiplication
+from op_ast.absyn_lib import buildRenamingTable
 
 
 def canonicalizeExp(e):

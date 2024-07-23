@@ -1,9 +1,8 @@
 from .error import OptimizerError
-from ast.absyn import Array, Addition, Multiplication
-from ast.absyn_lib import renameIndices, buildRenamingTable
+from op_ast.absyn import Array, Addition, Multiplication
+from op_ast.absyn_lib import renameIndices, buildRenamingTable
 from .cost_model import countOpCost
 from .canon import canonicalizeExp
-
 
 class ResultInfo:
     def __init__(self, lhs, rhs, from_inds, to_inds, i_arr_name_set, op_cost, is_volatile):
@@ -290,7 +289,7 @@ class UsageTable:
     def removeIntermediates(self, i_arrs, mults):
         def __makeRefMap(stmt_tab, top_arefs):
             all_arefs = top_arefs[:]
-            for (a, i) in stmt_tab.arr_map.items():
+            for (a, i) in list(stmt_tab.arr_map.items()):
                 all_arefs.extend(getARefNames(i.rhs))
 
             ref_map = {}

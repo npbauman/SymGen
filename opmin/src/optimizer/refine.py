@@ -1,11 +1,11 @@
-from ast.absyn import (
+from op_ast.absyn import (
     ArrayDecl,
     AssignStmt,
     Array,
     Addition,
     Multiplication,
 )
-from ast.absyn_lib import renameIndices, buildRenamingTable, extendRenamingTable
+from op_ast.absyn_lib import renameIndices, buildRenamingTable, extendRenamingTable
 from .math import gcd
 
 

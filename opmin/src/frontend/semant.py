@@ -2,7 +2,7 @@ from .error import InputError, FrontEndError
 from .absyn import Decl, RangeDecl, IndexDecl, ArrayDecl, ExpandDecl, VolatileDecl, IterationDecl, \
      Stmt, AssignStmt, Parenth, NumConst, Array, Addition, Multiplication
 from .absyn_lib import getIndices
-import ast.absyn
+import op_ast.absyn
 from functools import reduce
 
 
@@ -270,7 +270,7 @@ def symCheck(trans_unit):
 
 def __symCheckCompElem(comp_elem):
     for e in comp_elem.elems:
-        if (isinstance(e, ast.absyn.AssignStmt)):
+        if (isinstance(e, op_ast.absyn.AssignStmt)):
             __symCheckAssignStmt(e)
 
 
@@ -280,11 +280,11 @@ def __symCheckAssignStmt(s):
 
 
 def __symCheckExp(e, global_sym_groups):
-    if (isinstance(e, ast.absyn.Array)):
+    if (isinstance(e, op_ast.absyn.Array)):
         __symCheckArray(e, global_sym_groups)
-    elif (isinstance(e, ast.absyn.Addition)):
+    elif (isinstance(e, op_ast.absyn.Addition)):
         __symCheckAddition(e, global_sym_groups)
-    elif (isinstance(e, ast.absyn.Multiplication)):
+    elif (isinstance(e, op_ast.absyn.Multiplication)):
         __symCheckMultiplication(e, global_sym_groups)
     else:
         raise FrontEndError('%s: unknown declaration' % __name__)

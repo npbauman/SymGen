@@ -1,7 +1,7 @@
 from .combination import getAllCombinations, getTwoCombinations
 from .error import OptimizerError
-from ast.absyn import Array, Multiplication
-from ast.absyn_lib import renameIndices, buildRenamingTable
+from op_ast.absyn import Array, Multiplication
+from op_ast.absyn_lib import renameIndices, buildRenamingTable
 from .stmt_table import StmtTable
 
 
