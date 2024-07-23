@@ -10,7 +10,7 @@ from .combination import getTwoCombinations
 from .refine import updateCSE, updateFAC, refineTop
 from .math import gcd
 from backend.unparser import unparseCompElem
-from functools import reduce
+from functools import reduce, cmp_to_key
 
 #--------------------------------------------------------------------
 
@@ -152,7 +152,7 @@ def __applyOptimizations(comp_elem, range_tab, index_tab, volatile_tab, iteratio
     print('-------- finished weight-counting --------')
     
     # sort terms from heaviest to lightest
-    #terms.sort(lambda x,y: -cmp(x.weight, y.weight))
+    #terms.sort(lambda x,y: -my_cmp(x.weight, y.weight))
 
     if (__USE_CSE):
 
@@ -528,7 +528,21 @@ def __countCostForCompElem(comp_elem, stmt_tab, index_tab, volatile_tab, iterati
             cost += cur_op_cost
     #if show: print cost
     return cost
-    
+
+
+# cmp: Returns 1, -1, or 0
+def my_cmp(x, y):
+    return (x > y) - (x < y)
+
+def reverse_cmp(x, y):
+    return -my_cmp(x.weight, y.weight)
+
+def my_cmp1(x, y):
+    return (x[1] > y[1]) - (x[1] < y[1])  
+
+def my_cmp3(x, y):
+    return (x[3] > y[3]) - (x[3] < y[3])  
+
 #---------------------------------------------------------------------
 # Common Subexpression Elimination
 #---------------------------------------------------------------------
@@ -557,7 +571,7 @@ def __cseAPS(terms, index_tab, volatile_tab, iteration, interval, soft_limit, ha
     (cur_i_arrs, cur_infos, cur_stmt_tab, cur_cost) = acc[0]
 
     if (len(acc) > hard_limit):
-        acc.sort(lambda x,y: cmp(x[3], y[3]))
+        acc.sort(key=cmp_to_key(my_cmp3))
         l1 = len(acc)
         acc = acc[:hard_limit]
         l2 = len(acc)
@@ -565,7 +579,7 @@ def __cseAPS(terms, index_tab, volatile_tab, iteration, interval, soft_limit, ha
             print('--> exceed hard limit, cut search space (from %s to %s)' % (l1, l2))
 
     if (len(cur_i_arrs) > 0 and (len(cur_i_arrs) % interval == 0)):
-        acc.sort(lambda x,y: cmp(x[3], y[3]))
+        acc.sort(key=cmp_to_key(my_cmp3))
         l1 = len(acc)
         acc = acc[:soft_limit]
         l2 = len(acc)
@@ -625,7 +639,9 @@ def __divideAndConquerFactorization(multi_term, usage_tab, index_tab, volatile_t
     terms = [x for x in multi_term if isinstance(x, Term)]
 
     # sort terms from heaviest to lightest
-    terms.sort(lambda x,y: -cmp(x.weight, y.weight))
+    # sort(lambda x,y: -my_cmp(x.weight, y.weight))
+    terms.sort(key=cmp_to_key(reverse_cmp)) 
+    
 
     # divide
     mterm_chunks = []
@@ -726,7 +742,7 @@ def __factorizeMultiTerm(multi_term, usage_tab, index_tab, volatile_tab, iterati
             if (__FACT_LIMIT > 1):
                 result_costs = [__countCostForMultiTerm(x[0], x[1], index_tab, volatile_tab, iteration) for x in iter_results]
                 compound = list(zip(iter_results, result_costs))
-                compound.sort(lambda x,y: cmp(x[1], y[1]))
+                compound.sort(key=cmp_to_key(my_cmp1))
                 iter_results = [x[0] for x in compound]
 
             l1 = len(iter_results)
@@ -1110,7 +1126,8 @@ def __prepareForRecursion(multi_term, def_map, usage_tab, index_tab, volatile_ta
             t.weight = cur_stmt_tab.getCostForIntermediateNames(cur_stmt_tab.getAllIntermediateNames())
     
         # sort terms from heaviest to lightest
-        terms.sort(lambda x,y: -cmp(x.weight, y.weight))
+        # terms.sort(lambda x,y: -my_cmp(x.weight, y.weight))
+        terms.sort(key=cmp_to_key(reverse_cmp))
     
         # common-subexpression elimination
         cur_results = __cse(terms, usage_tab.stmt_tab, index_tab, volatile_tab, iteration,

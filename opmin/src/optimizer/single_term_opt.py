@@ -60,7 +60,7 @@ def __exhaustiveSearch(subexps, index_tab, volatile_tab, iteration, stmt_tab, gl
                 infos = None
                 cost = None
 
-                for left_size in range(1, (cur_size/2)+1):   # 3 -> 1+2,2+1    4->1+3,2+2,3+1
+                for left_size in range(1, int(cur_size/2)+1):   # 3 -> 1+2,2+1    4->1+3,2+2,3+1
                     right_size = cur_size - left_size
 
                     left_combs = subcombinations[left_size]
@@ -72,7 +72,7 @@ def __exhaustiveSearch(subexps, index_tab, volatile_tab, iteration, stmt_tab, gl
                     else:
                         up_bound = len(left_combs)
 
-                    for i in range(0, up_bound):
+                    for i in range(0, int(up_bound)):
                         left_key = [cur_comb[x] for x in left_combs[i]]    # find left key in cur_comb
                         right_key = [cur_comb[x] for x in right_combs[i]]  # find right key in cur_comb
 

@@ -138,7 +138,7 @@ def oneIdx2nIdx(idx,dims): # idx = 5 , dims = [2,2,2] ==> nidx = [1,0,1]
     if len(dims)==0: return []
     else:
         x = idx%dims[-1]  # dims[-1]!=0
-        nidx = oneIdx2nIdx(idx/dims[-1],dims[:-1])
+        nidx = oneIdx2nIdx(int(idx/dims[-1]),dims[:-1])
         nidx.append(x)
     return nidx
 

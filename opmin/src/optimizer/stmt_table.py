@@ -3,6 +3,7 @@ from op_ast.absyn import Array, Addition, Multiplication
 from op_ast.absyn_lib import renameIndices, buildRenamingTable
 from .cost_model import countOpCost
 from .canon import canonicalizeExp
+from functools import cmp_to_key
 
 class ResultInfo:
     def __init__(self, lhs, rhs, from_inds, to_inds, i_arr_name_set, op_cost, is_volatile):
@@ -49,7 +50,8 @@ class StmtTable:
 
     def getAllIntermediateNames(self):
         inter_names = list(self.arr_map.keys())
-        inter_names.sort(lambda x, y: compareInterNames(x, y))
+        # inter_names.sort(lambda x, y: compareInterNames(x, y))
+        inter_names.sort(key=cmp_to_key(compareInterNames))
         return inter_names
 
     def getAllIntermediateExps(self):
