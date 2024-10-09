@@ -1,4 +1,5 @@
-from functools import reduce
+from functools import reduce, cmp_to_key
+
 # Absyn
 #  |
 #  +-- TranslationUnit
@@ -80,7 +81,8 @@ class CompoundElem(Absyn):
         else:
             pass
 
-        inter_names.sort(lambda x, y: compareInterNames(x, y))
+        # inter_names.sort(lambda x, y: compareInterNames(x, y))
+        inter_names.sort(key=cmp_to_key(compareInterNames))
 
         return inter_names
 
